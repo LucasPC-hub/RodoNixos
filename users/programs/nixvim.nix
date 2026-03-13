@@ -1,0 +1,102 @@
+{ ... }:
+
+{
+  programs.nixvim = {
+    enable = true;
+    viAlias = true;
+    vimAlias = true;
+
+    opts = {
+      number = true;
+      relativenumber = true;
+      shiftwidth = 2;
+      tabstop = 2;
+      expandtab = true;
+      smartindent = true;
+      wrap = false;
+      swapfile = false;
+      termguicolors = true;
+    };
+
+    plugins = {
+      lualine.enable = true;
+      web-devicons.enable = true;
+
+      nvim-tree = {
+        enable = true;
+        openOnSetup = true;
+        settings = {
+          disable_netrw = true;
+          hijack_netrw = true;
+          update_focused_file.enable = true;
+          view = {
+            width = 30;
+            side = "left";
+          };
+          renderer = {
+            highlight_git = true;
+            icons.show.file = true;
+            icons.show.folder = true;
+          };
+        };
+      };
+
+      telescope.enable = true;
+      treesitter.enable = true;
+
+      presence-nvim = {
+        enable = true;
+        enableLineNumber = true;
+        autoUpdate = true;
+      };
+
+      cmp.enable = true;
+      comment.enable = true;
+      vim-surround.enable = true;
+      fugitive.enable = true;
+
+      lsp = {
+        enable = true;
+        servers = {
+          lua_ls = {};
+          pyright = {};
+          ts_ls = {};
+          nil_ls = {
+            enable = true;
+            settings = {
+              formatting.command = [ "nixpkgs-fmt" ];
+            };
+          };
+        };
+      };
+    };
+
+    globals = {
+      mapleader = " ";
+      maplocalleader = " ";
+    };
+
+    keymaps = [
+      {
+        key = "<leader>ff";
+        action = "<cmd>Telescope find_files<cr>";
+        options.desc = "Find files";
+      }
+      {
+        key = "<leader>fg";
+        action = "<cmd>Telescope live_grep<cr>";
+        options.desc = "Live grep";
+      }
+      {
+        key = "<leader>w";
+        action = "<cmd>NvimTreeToggle<cr>";
+        options.desc = "Toggle file explorer";
+      }
+      {
+        key = "<leader>n";
+        action = "<cmd>NvimTreeFindFile<cr>";
+        options.desc = "Find current file in explorer";
+      }
+    ];
+  };
+}
