@@ -18,6 +18,7 @@
     ../../modules/hardware/bluetooth.nix
     ../../modules/hardware/droidcam.nix
     ../../modules/hardware/logitech.nix
+    ../../modules/hardware/printing.nix
   ];
 
   # Overlay do kernel CachyOS
