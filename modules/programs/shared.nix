@@ -16,6 +16,7 @@ in
     tree
     pciutils
     inputs.claude-code.packages.${system}.default
+    inputs.zen-browser.packages.${system}.default
   ];
 
   programs.zsh.enable = true;
