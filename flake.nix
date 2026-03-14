@@ -33,6 +33,19 @@
       modules = [
         hostPath
 
+        # Overlay para desabilitar doc do python (bug no nixpkgs)
+        {
+          nixpkgs.overlays = [
+            (final: prev: {
+              python312 = prev.python312.overrideAttrs (old: {
+                passthru = old.passthru // {
+                  doc = final.emptyDirectory;
+                };
+              });
+            })
+          ];
+        }
+
         inputs.dms.nixosModules.default
         inputs.home-manager.nixosModules.default
         {
