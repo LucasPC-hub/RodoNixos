@@ -23,6 +23,13 @@
     QT_QPA_PLATFORMTHEME = "gtk3";
   };
 
+  # Cedilha (ç/Ç) com dead_acute + c
+  home.file.".XCompose".text = ''
+    include "%L"
+    <dead_acute> <c> : "ç" U00E7
+    <dead_acute> <C> : "Ç" U00C7
+  '';
+
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       gtk-theme = "adw-gtk3-dark";

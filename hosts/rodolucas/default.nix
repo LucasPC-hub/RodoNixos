@@ -38,5 +38,29 @@
 
   networking.hostName = "rodolucas";
 
+  # Bateria e energia
+  services.upower.enable = true;
+  services.power-profiles-daemon.enable = true;
+
+  # Montar dispositivos (MTP, USB, etc) + thumbnails no file manager
+  services.gvfs.enable = true;
+  services.tumbler.enable = true;
+
+  # Fonts
+  fonts.packages = with pkgs; [
+    fira-sans
+    roboto
+    jetbrains-mono
+    nerd-fonts._0xproto
+    nerd-fonts.droid-sans-mono
+    nerd-fonts.fantasque-sans-mono
+    noto-fonts
+    noto-fonts-emoji
+    noto-fonts-cjk-sans
+    noto-fonts-cjk-serif
+    material-symbols
+    material-icons
+  ];
+
   system.stateVersion = "25.05";
 }
