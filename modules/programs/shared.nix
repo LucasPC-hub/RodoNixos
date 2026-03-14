@@ -1,5 +1,8 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
+let
+  system = pkgs.stdenv.hostPlatform.system;
+in
 {
   # Pacotes que TODO host recebe
   environment.systemPackages = with pkgs; [
@@ -12,7 +15,7 @@
     jq
     tree
     pciutils
-    claude-code
+    inputs.claude-code.packages.${system}.default
   ];
 
   programs.zsh.enable = true;
