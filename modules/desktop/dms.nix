@@ -22,8 +22,6 @@
     enableDynamicTheming = true;
     enableAudioWavelength = true;
     enableCalendarEvents = true;
-    enableClipboard = true;
     enableClipboardPaste = true;
-    enableBrightnessControl = true;
   };
 }
