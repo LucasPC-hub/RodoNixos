@@ -44,10 +44,12 @@
       telescope.enable = true;
       treesitter.enable = true;
 
-      presence-nvim = {
+      presence = {
         enable = true;
-        enableLineNumber = true;
-        autoUpdate = true;
+        settings = {
+          enable_line_number = true;
+          auto_update = true;
+        };
       };
 
       cmp.enable = true;

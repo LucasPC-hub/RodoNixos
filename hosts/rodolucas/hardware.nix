@@ -1,13 +1,30 @@
 # Gerado automaticamente por nixos-generate-config
-# Substitua este arquivo pelo output de:
-#   nixos-generate-config --show-hardware-config
-{ config, lib, modulesPath, ... }:
+# Hardware: Intel CPU com Thunderbolt, NVMe
+{ config, lib, pkgs, modulesPath, ... }:
 
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  # TODO: Cole aqui o conteúdo do hardware-configuration.nix
-  # gerado durante a instalação do NixOS
+  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-intel" ];
+  boot.extraModulePackages = [ ];
+
+  fileSystems."/" = {
+    device = "/dev/disk/by-uuid/5c1fb92f-1600-45dd-9bc0-1ac58087f0c9";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/C198-5FF7";
+    fsType = "vfat";
+    options = [ "fmask=0077" "dmask=0077" ];
+  };
+
+  swapDevices = [ ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }

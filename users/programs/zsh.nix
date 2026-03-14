@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   programs.zsh = {
@@ -36,12 +36,12 @@
       }
     ];
 
-    initExtraFirst = ''
-      # fzf-tab precisa carregar antes do compinit
-      source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
-    '';
-
-    initExtra = ''
+    initContent = lib.mkMerge [
+      (lib.mkBefore ''
+        # fzf-tab precisa carregar antes do compinit
+        source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
+      '')
+      ''
       # Opções do shell
       setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
       setopt CORRECT GLOB_DOTS EXTENDED_GLOB NO_BEEP
@@ -132,7 +132,8 @@
         export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
         source <(carapace _carapace)
       fi
-    '';
+    ''
+    ];
   };
 
   # Programas que o zsh usa
