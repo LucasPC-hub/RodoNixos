@@ -39,7 +39,7 @@
   };
 
   environment.systemPackages = with pkgs; [
-    glxinfo
+    mesa-demos
     nvidia-vaapi-driver
     libva
   ];
