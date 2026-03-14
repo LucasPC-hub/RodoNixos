@@ -4,6 +4,7 @@
   imports = [
     ./shared.nix
     inputs.nixvim.homeModules.nixvim
+    inputs.dsearch.homeModules.default
   ];
 
   home.username = "lucasp";
@@ -15,7 +16,10 @@
 
   ];
 
+  programs.dsearch.enable = true;
+
   home.sessionVariables = {
     EDITOR = "vim";
+    QT_QPA_PLATFORMTHEME = "gtk3";
   };
 }

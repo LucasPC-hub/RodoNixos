@@ -8,6 +8,7 @@
     ../../modules/core/nix.nix
     ../../modules/core/locale.nix
     ../../modules/core/networking.nix
+    ../../modules/core/openssh.nix
     ../../modules/programs/shared.nix
     ../../modules/programs/dev.nix
     ../../modules/programs/gaming.nix
