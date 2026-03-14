@@ -12,6 +12,7 @@
     jq
     tree
     pciutils
+    claude-code
   ];
 
   programs.zsh.enable = true;
