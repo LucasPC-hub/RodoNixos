@@ -58,6 +58,7 @@
                   doc = final.emptyDirectory;
                 };
               });
+              quickshell = inputs.quickshell.packages.${system}.default;
             })
           ];
         }
