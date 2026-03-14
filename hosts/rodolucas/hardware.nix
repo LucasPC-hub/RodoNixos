@@ -23,6 +23,12 @@
     options = [ "fmask=0077" "dmask=0077" ];
   };
 
+  fileSystems."/media/lucasp/windows" = {
+    device = "/dev/disk/by-uuid/6E4AF25A4AF21E91";
+    fsType = "ntfs-3g";
+    options = [ "rw" "uid=1000" "gid=100" "nofail" ];
+  };
+
   swapDevices = [ ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

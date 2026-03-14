@@ -6,8 +6,9 @@
     gcc
     gh
     gnumake
-    nixfmt-rfc-style
+    nixfmt
     docker-compose
+    lazydocker
 
     # Node
     nodejs_22
