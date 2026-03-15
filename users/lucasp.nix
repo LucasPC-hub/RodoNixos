@@ -3,6 +3,7 @@
 {
   imports = [
     ./shared.nix
+    ./programs/dms-config.nix
     inputs.nixvim.homeModules.nixvim
     inputs.dsearch.homeModules.default
   ];

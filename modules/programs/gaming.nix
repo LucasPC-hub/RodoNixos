@@ -15,5 +15,7 @@
     gamescope
     protonplus
     lutris
+    wineWowPackages.stable
+    winetricks
   ];
 }

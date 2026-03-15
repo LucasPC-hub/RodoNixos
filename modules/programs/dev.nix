@@ -8,6 +8,7 @@
     gnumake
     nixfmt
     docker-compose
+    docker-buildx
     lazydocker
 
     # Node
