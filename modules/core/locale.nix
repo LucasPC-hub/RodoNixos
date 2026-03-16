@@ -19,4 +19,10 @@
   };
 
   console.keyMap = "br-abnt2";
+
+  services.xserver.xkb = {
+    layout = "us,br";
+    variant = "intl,abnt2";
+    options = "grp:alt_shift_toggle,terminate:ctrl_alt_bksp";
+  };
 }

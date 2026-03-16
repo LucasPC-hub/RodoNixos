@@ -24,6 +24,9 @@
   home.sessionVariables = {
     EDITOR = "vim";
     QT_QPA_PLATFORMTHEME = "gtk3";
+    TERMINAL = "kitty";
+    BROWSER = "zen";
+    FILES = "thunar";
   };
 
   # Cedilha (ç/Ç) com dead_acute + c

@@ -6,7 +6,6 @@ let
   flakeDmsPath = "/home/lucasp/RodoNixos/users/config/dms";
 in
 {
-  # Script pra sincronizar mudanças do DMS de volta pro flake
   home.packages = [
     (pkgs.writeShellScriptBin "dms-sync" ''
       src="${dmsConfigDest}"
@@ -17,43 +16,49 @@ in
         exit 1
       fi
 
-      # Mostra diff antes de copiar
       changed=false
       for f in "$src"/*.kdl; do
         name="$(basename "$f")"
         if [ ! -f "$dest/$name" ]; then
-          echo "NOVO: $name"
+          echo ""
+          echo "=== NOVO: $name ==="
+          echo "[f] Ignorar"
+          echo "[r] Copiar pro flake"
+          printf "Escolha [f/r]: "
+          read -r resp
+          if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
+            cp -v "$f" "$dest/$name"
+          fi
           changed=true
         elif ! cmp -s "$f" "$dest/$name"; then
-          echo "MODIFICADO: $name"
+          echo ""
+          echo "=== $name mudou ==="
           ${pkgs.diffutils}/bin/diff --color -u "$dest/$name" "$f" || true
           echo ""
+          echo "[f] Manter versão do flake"
+          echo "[r] Manter versão do runtime"
+          printf "Escolha [f/r]: "
+          read -r resp
+          if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
+            cp -v "$f" "$dest/$name"
+            echo "Runtime copiado pro flake."
+          else
+            echo "Flake mantido."
+          fi
           changed=true
         fi
       done
 
       if [ "$changed" = false ]; then
-        echo "Nenhuma mudança detectada."
-        exit 0
-      fi
-
-      printf "\nAplicar mudanças pro flake? [s/N] "
-      read -r resp
-      if [ "$resp" = "s" ] || [ "$resp" = "S" ]; then
-        cp -v "$src"/*.kdl "$dest"/
-        echo "Pronto! Lembre de commitar as mudanças no flake."
-      else
-        echo "Cancelado."
+        echo "DMS configs em sync."
       fi
     '')
   ];
 
-  # Activation script: copia os arquivos do flake pro destino (mutável, não symlink)
   home.activation.dmsConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${dmsConfigDest}"
     for f in ${dmsConfigSrc}/*.kdl; do
       dest="${dmsConfigDest}/$(basename "$f")"
-      # Só copia se o arquivo do flake for diferente do atual
       if [ ! -f "$dest" ] || ! cmp -s "$f" "$dest"; then
         cp "$f" "$dest"
         chmod 644 "$dest"

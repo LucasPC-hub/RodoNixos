@@ -26,6 +26,7 @@
       ll = "eza -la --icons";
       lt = "eza --tree --level=2 --icons";
       cat = "bat";
+      fkr = "cd ~/RodoNixos && dms-sync && sudo nixos-rebuild switch --flake '.#rodolucas'";
     };
 
     plugins = [

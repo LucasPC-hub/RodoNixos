@@ -15,7 +15,7 @@
     gamescope
     protonplus
     lutris
-    wineWowPackages.stable
+    wineWow64Packages.stable
     winetricks
     linux-wallpaperengine
   ];
