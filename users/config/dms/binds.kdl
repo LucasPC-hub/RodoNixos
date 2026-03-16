@@ -98,7 +98,7 @@ binds {
     Mod+B hotkey-overlay-title="Open Browser" { spawn "sh" "-c" "$BROWSER"; }
     Mod+E hotkey-overlay-title="Open File Manager" { spawn "sh" "-c" "$FILES"; }
     Mod+Z hotkey-overlay-title="Open Zed Editor" { spawn "zeditor"; }
-    Super+O hotkey-overlay-title="Open Terminal" { spawn "sh" "-c" "$TERMINAL"; }
+    Super+T hotkey-overlay-title="Open Terminal" { spawn "sh" "-c" "$TERMINAL"; }
     XF86KbdBrightnessDown allow-when-locked=true { spawn "kbdbrite.sh" "down"; }
     XF86KbdBrightnessUp allow-when-locked=true { spawn "kbdbrite.sh" "up"; }
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }

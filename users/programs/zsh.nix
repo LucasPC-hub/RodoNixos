@@ -7,7 +7,14 @@
       enable = true;
       strategy = [ "history" "completion" ];
     };
-    syntaxHighlighting.enable = true;
+    syntaxHighlighting = {
+      enable = true;
+      styles = {
+        "dollar-double-quoted-argument" = "fg=cyan";
+        "dollar-quoted-argument" = "fg=cyan";
+        "assign" = "fg=cyan";
+      };
+    };
     enableCompletion = true;
     historySubstringSearch.enable = true;
 
@@ -75,6 +82,9 @@
       "
       export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:500 {}' 2>/dev/null --preview-window right:50%:wrap"
       export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {} 2>/dev/null' --preview-window right:50%"
+
+      # Desabilita kitty keyboard protocol (evita escape sequences tipo 6;9u)
+      printf '\e[>4;0m'
 
       # Key bindings
       bindkey -e

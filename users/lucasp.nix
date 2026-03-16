@@ -17,6 +17,8 @@
     protonmail-desktop
     proton-pass
     protonvpn-gui
+    tidal-hifi
+    jetbrains.webstorm
   ];
 
   programs.dsearch.enable = true;

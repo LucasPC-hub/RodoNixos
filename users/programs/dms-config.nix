@@ -23,7 +23,7 @@ let
       if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
         cp -v "$runtime" "$flake"
       fi
-      return 0
+      exit 0
     fi
 
     if ! cmp -s "$runtime" "$flake"; then
@@ -41,10 +41,10 @@ let
       else
         echo "Flake mantido."
       fi
-      return 0
+      exit 0
     fi
 
-    return 1
+    exit 1
   '';
 in
 {
