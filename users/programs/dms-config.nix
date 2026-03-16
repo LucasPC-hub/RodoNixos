@@ -1,64 +1,88 @@
 { config, pkgs, ... }:
 
 let
+  homeDir = config.home.homeDirectory;
+  niriDir = "${homeDir}/.config/niri";
+  flakeBase = "/home/lucasp/RodoNixos/users/config";
+
   dmsConfigSrc = ../config/dms;
-  dmsConfigDest = "${config.home.homeDirectory}/.config/niri/dms";
-  flakeDmsPath = "/home/lucasp/RodoNixos/users/config/dms";
+  niriConfigSrc = ../config/niri-config.kdl;
+
+  syncFile = pkgs.writeShellScript "niri-sync-file" ''
+    runtime="$1"
+    flake="$2"
+    name="$3"
+
+    if [ ! -f "$flake" ]; then
+      echo ""
+      echo "=== NOVO: $name ==="
+      echo "[f] Ignorar"
+      echo "[r] Copiar pro flake"
+      printf "Escolha [f/r]: "
+      read -r resp
+      if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
+        cp -v "$runtime" "$flake"
+      fi
+      return 0
+    fi
+
+    if ! cmp -s "$runtime" "$flake"; then
+      echo ""
+      echo "=== $name mudou ==="
+      ${pkgs.diffutils}/bin/diff --color -u "$flake" "$runtime" || true
+      echo ""
+      echo "[f] Manter versão do flake"
+      echo "[r] Manter versão do runtime"
+      printf "Escolha [f/r]: "
+      read -r resp
+      if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
+        cp -v "$runtime" "$flake"
+        echo "Runtime copiado pro flake."
+      else
+        echo "Flake mantido."
+      fi
+      return 0
+    fi
+
+    return 1
+  '';
 in
 {
   home.packages = [
-    (pkgs.writeShellScriptBin "dms-sync" ''
-      src="${dmsConfigDest}"
-      dest="${flakeDmsPath}"
+    (pkgs.writeShellScriptBin "niri-sync" ''
+      changed=false
 
-      if [ ! -d "$src" ]; then
-        echo "Diretório DMS não encontrado: $src"
-        exit 1
+      # Sync config.kdl
+      if [ -f "${niriDir}/config.kdl" ]; then
+        ${syncFile} "${niriDir}/config.kdl" "${flakeBase}/niri-config.kdl" "config.kdl" && changed=true
       fi
 
-      changed=false
-      for f in "$src"/*.kdl; do
-        name="$(basename "$f")"
-        if [ ! -f "$dest/$name" ]; then
-          echo ""
-          echo "=== NOVO: $name ==="
-          echo "[f] Ignorar"
-          echo "[r] Copiar pro flake"
-          printf "Escolha [f/r]: "
-          read -r resp
-          if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
-            cp -v "$f" "$dest/$name"
-          fi
-          changed=true
-        elif ! cmp -s "$f" "$dest/$name"; then
-          echo ""
-          echo "=== $name mudou ==="
-          ${pkgs.diffutils}/bin/diff --color -u "$dest/$name" "$f" || true
-          echo ""
-          echo "[f] Manter versão do flake"
-          echo "[r] Manter versão do runtime"
-          printf "Escolha [f/r]: "
-          read -r resp
-          if [ "$resp" = "r" ] || [ "$resp" = "R" ]; then
-            cp -v "$f" "$dest/$name"
-            echo "Runtime copiado pro flake."
-          else
-            echo "Flake mantido."
-          fi
-          changed=true
-        fi
-      done
+      # Sync dms/*.kdl
+      if [ -d "${niriDir}/dms" ]; then
+        for f in "${niriDir}/dms"/*.kdl; do
+          name="dms/$(basename "$f")"
+          ${syncFile} "$f" "${flakeBase}/dms/$(basename "$f")" "$name" && changed=true
+        done
+      fi
 
       if [ "$changed" = false ]; then
-        echo "DMS configs em sync."
+        echo "Niri configs em sync."
       fi
     '')
   ];
 
-  home.activation.dmsConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "${dmsConfigDest}"
+  home.activation.niriConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+    # Sync config.kdl
+    dest="${niriDir}/config.kdl"
+    if [ ! -f "$dest" ] || ! cmp -s "${niriConfigSrc}" "$dest"; then
+      cp "${niriConfigSrc}" "$dest"
+      chmod 644 "$dest"
+    fi
+
+    # Sync dms/*.kdl
+    mkdir -p "${niriDir}/dms"
     for f in ${dmsConfigSrc}/*.kdl; do
-      dest="${dmsConfigDest}/$(basename "$f")"
+      dest="${niriDir}/dms/$(basename "$f")"
       if [ ! -f "$dest" ] || ! cmp -s "$f" "$dest"; then
         cp "$f" "$dest"
         chmod 644 "$dest"

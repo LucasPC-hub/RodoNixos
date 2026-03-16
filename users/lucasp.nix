@@ -25,7 +25,7 @@
     EDITOR = "vim";
     QT_QPA_PLATFORMTHEME = "gtk3";
     TERMINAL = "kitty";
-    BROWSER = "zen";
+    BROWSER = "zen-beta";
     FILES = "thunar";
   };
 
