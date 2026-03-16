@@ -4,20 +4,8 @@
   # Compositor Wayland
   programs.niri.enable = true;
 
-  # Xwayland compatibility for X11 apps (Steam, etc.)
+  # Xwayland (system package only — session config is in home-manager)
   environment.systemPackages = [ pkgs.xwayland-satellite ];
-  environment.sessionVariables.DISPLAY = ":0";
-
-  systemd.user.services.xwayland-satellite = {
-    description = "Xwayland Satellite";
-    wantedBy = [ "niri.service" ];
-    after = [ "niri.service" ];
-    serviceConfig = {
-      ExecStart = "${pkgs.xwayland-satellite}/bin/xwayland-satellite :0";
-      Restart = "on-failure";
-      RestartSec = 3;
-    };
-  };
 
   # Greeter
   services.displayManager.dms-greeter = {
