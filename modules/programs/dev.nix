@@ -28,6 +28,9 @@
 
     # Rust
     rustup
+
+    # API client
+    bruno
   ];
 
   virtualisation.docker = {

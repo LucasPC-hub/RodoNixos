@@ -14,7 +14,9 @@
 
   # Pacotes só meus
   home.packages = with pkgs; [
-
+    protonmail-desktop
+    proton-pass
+    protonvpn-gui
   ];
 
   programs.dsearch.enable = true;
