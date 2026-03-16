@@ -17,5 +17,6 @@
     lutris
     wineWowPackages.stable
     winetricks
+    linux-wallpaperengine
   ];
 }

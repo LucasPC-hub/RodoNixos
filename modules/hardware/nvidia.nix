@@ -38,6 +38,15 @@
     nvidia-resume.wantedBy = [ "suspend.target" ];
   };
 
+  # Auto-offload everything to NVIDIA when on AC power
+  environment.shellInit = ''
+    if [ "$(cat /sys/class/power_supply/AC*/online 2>/dev/null)" = "1" ]; then
+      export __NV_PRIME_RENDER_OFFLOAD=1
+      export __VK_LAYER_NV_optimus=NVIDIA_only
+      export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    fi
+  '';
+
   environment.systemPackages = with pkgs; [
     mesa-demos
     nvidia-vaapi-driver
