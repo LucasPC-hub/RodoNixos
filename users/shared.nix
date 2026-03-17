@@ -7,6 +7,7 @@
     ./programs/nixvim.nix
     ./programs/obs.nix
     ./programs/fastfetch.nix
+    ./programs/vscode.nix
   ];
 
   programs.git.enable = true;

@@ -19,6 +19,7 @@
     protonvpn-gui
     tidal-hifi
     jetbrains.webstorm
+    zed-editor
   ];
 
   programs.dsearch.enable = true;
