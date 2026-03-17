@@ -20,7 +20,7 @@ in
     thunar
     adw-gtk3
     kdePackages.qt6ct
-    colloid-icon-theme
+    (colloid-icon-theme.override { schemeVariants = [ "purple" ]; })
   ];
 
   programs.zsh.enable = true;
