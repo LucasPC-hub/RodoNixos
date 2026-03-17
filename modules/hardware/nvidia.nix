@@ -50,30 +50,28 @@
       Type = "oneshot";
       ExecStart = pkgs.writeShellScript "nvidia-prime-ac-update" ''
         online=$(cat /sys/class/power_supply/ADP1/online 2>/dev/null || echo 0)
-        for user in $(${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}'); do
+
+        # Set/remove marker file first (shellInit depends on this)
+        if [ "$online" = "1" ]; then
+          mkdir -p /run/nvidia-offload
+          touch /run/nvidia-offload/env
+        else
+          rm -f /run/nvidia-offload/env
+        fi
+
+        # Update env for already-running user sessions
+        ${pkgs.systemd}/bin/loginctl list-users --no-legend | while read -r uid user _; do
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus"
           if [ "$online" = "1" ]; then
-            mkdir -p /run/nvidia-offload
-            touch /run/nvidia-offload/env
-            ${pkgs.systemd}/bin/busctl call \
-              --user --machine="$user@" \
-              org.freedesktop.systemd1 \
-              /org/freedesktop/systemd1 \
-              org.freedesktop.systemd1.Manager \
-              SetEnvironment as 3 \
-              "__NV_PRIME_RENDER_OFFLOAD=1" \
-              "__VK_LAYER_NV_optimus=NVIDIA_only" \
-              "__GLX_VENDOR_LIBRARY_NAME=nvidia"
+            ${pkgs.systemd}/bin/systemctl --user -M "$user@" set-environment \
+              __NV_PRIME_RENDER_OFFLOAD=1 \
+              __VK_LAYER_NV_optimus=NVIDIA_only \
+              __GLX_VENDOR_LIBRARY_NAME=nvidia || true
           else
-            rm -f /run/nvidia-offload/env
-            ${pkgs.systemd}/bin/busctl call \
-              --user --machine="$user@" \
-              org.freedesktop.systemd1 \
-              /org/freedesktop/systemd1 \
-              org.freedesktop.systemd1.Manager \
-              UnsetEnvironment as 3 \
-              "__NV_PRIME_RENDER_OFFLOAD" \
-              "__VK_LAYER_NV_optimus" \
-              "__GLX_VENDOR_LIBRARY_NAME"
+            ${pkgs.systemd}/bin/systemctl --user -M "$user@" unset-environment \
+              __NV_PRIME_RENDER_OFFLOAD \
+              __VK_LAYER_NV_optimus \
+              __GLX_VENDOR_LIBRARY_NAME || true
           fi
         done
       '';
