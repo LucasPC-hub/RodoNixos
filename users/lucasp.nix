@@ -30,6 +30,7 @@
     TERMINAL = "kitty";
     BROWSER = "zen-beta";
     FILES = "thunar";
+    NIXOS_OZONE_WL = "1";
   };
 
   # Cedilha (ç/Ç) com dead_acute + c
