@@ -52,8 +52,8 @@ input {
         // drag false
         // drag-lock
         natural-scroll
-        // accel-speed 0.2
-        // accel-profile "flat"
+        accel-speed 0.3
+        accel-profile "adaptive"
         // scroll-method "two-finger"
         // disabled-on-external-mouse
     }
@@ -77,12 +77,9 @@ input {
         // middle-emulation
     }
 
-    // Uncomment this to make the mouse warp to the center of newly focused windows.
-    // warp-mouse-to-focus
+    warp-mouse-to-focus
 
-    // Focus windows and outputs automatically when moving the mouse into them.
-    // Setting max-scroll-amount="0%" makes it work only on windows already fully on screen.
-    // focus-follows-mouse max-scroll-amount="0%"
+    focus-follows-mouse max-scroll-amount="30%"
 }
 // You can configure outputs by their name, which you can find
 // by running `niri msg outputs` while inside a niri instance.
