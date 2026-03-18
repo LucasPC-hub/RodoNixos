@@ -148,7 +148,6 @@
   };
 
   # Programas que o zsh usa
-  programs.starship.enable = true;
   programs.zoxide.enable = true;
   programs.atuin = {
     enable = true;

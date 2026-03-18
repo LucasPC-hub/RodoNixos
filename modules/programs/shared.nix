@@ -16,6 +16,7 @@ in
     tree
     pciutils
     inputs.claude-code.packages.${system}.default
+    inputs.claude-desktop.packages.${system}.claude-desktop-with-fhs
     inputs.zen-browser.packages.${system}.default
     discord
     thunar

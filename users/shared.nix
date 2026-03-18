@@ -4,6 +4,7 @@
   imports = [
     ./programs/kitty.nix
     ./programs/zsh.nix
+    ./programs/starship.nix
     ./programs/nixvim.nix
     ./programs/obs.nix
     ./programs/fastfetch.nix
