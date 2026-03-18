@@ -25,6 +25,7 @@ in
     (colloid-icon-theme.override { schemeVariants = [ "all" ]; })
     easyeffects
     calf
+    bubblewrap
   ];
 
   programs.zsh.enable = true;
