@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   hardware.graphics = {
@@ -10,7 +10,10 @@
     ];
   };
 
-  services.xserver.videoDrivers = [ "modesetting" "nvidia" ];
+  services.xserver.videoDrivers = [
+    "modesetting"
+    "nvidia"
+  ];
 
   hardware.nvidia = {
     modesetting.enable = true;
@@ -30,62 +33,6 @@
       };
     };
   };
-
-  # Nvidia suspend/hibernate
-  systemd.services = {
-    nvidia-suspend.wantedBy = [ "suspend.target" ];
-    nvidia-hibernate.wantedBy = [ "hibernate.target" ];
-    nvidia-resume.wantedBy = [ "suspend.target" ];
-  };
-
-  # Auto-offload everything to NVIDIA when on AC power
-  # udev triggers a systemd service on AC plug/unplug
-  services.udev.extraRules = ''
-    SUBSYSTEM=="power_supply", ATTR{type}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl start nvidia-prime-ac-update.service"
-  '';
-
-  systemd.services.nvidia-prime-ac-update = {
-    description = "Update NVIDIA PRIME offload env based on AC power";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = pkgs.writeShellScript "nvidia-prime-ac-update" ''
-        online=$(cat /sys/class/power_supply/ADP1/online 2>/dev/null || echo 0)
-
-        # Set/remove marker file first (shellInit depends on this)
-        if [ "$online" = "1" ]; then
-          mkdir -p /run/nvidia-offload
-          touch /run/nvidia-offload/env
-        else
-          rm -f /run/nvidia-offload/env
-        fi
-
-        # Update env for already-running user sessions
-        ${pkgs.systemd}/bin/loginctl list-users --no-legend | while read -r uid user _; do
-          export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus"
-          if [ "$online" = "1" ]; then
-            ${pkgs.systemd}/bin/systemctl --user -M "$user@" set-environment \
-              __NV_PRIME_RENDER_OFFLOAD=1 \
-              __VK_LAYER_NV_optimus=NVIDIA_only \
-              __GLX_VENDOR_LIBRARY_NAME=nvidia || true
-          else
-            ${pkgs.systemd}/bin/systemctl --user -M "$user@" unset-environment \
-              __NV_PRIME_RENDER_OFFLOAD \
-              __VK_LAYER_NV_optimus \
-              __GLX_VENDOR_LIBRARY_NAME || true
-          fi
-        done
-      '';
-    };
-  };
-
-  # Fallback for shells opened before udev fires
-  environment.shellInit = ''
-    if [ -f /run/nvidia-offload/env ]; then
-      export __NV_PRIME_RENDER_OFFLOAD=1
-      export __VK_LAYER_NV_optimus=NVIDIA_only
-      export __GLX_VENDOR_LIBRARY_NAME=nvidia
-    fi
-  '';
 
   environment.systemPackages = with pkgs; [
     mesa-demos
