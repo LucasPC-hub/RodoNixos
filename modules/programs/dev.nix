@@ -31,6 +31,9 @@
 
     # API client
     bruno
+
+    # IDEs
+    jetbrains.datagrip
   ];
 
   virtualisation.docker = {
