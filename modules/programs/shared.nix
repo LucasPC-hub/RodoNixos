@@ -17,6 +17,7 @@ in
     pciutils
     inputs.claude-code.packages.${system}.default
     inputs.zen-browser.packages.${system}.default
+    discord
     thunar
     adw-gtk3
     kdePackages.qt6ct
