@@ -42,6 +42,11 @@
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    stylix = {
+      url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { nixpkgs, ... }@inputs:
@@ -69,6 +74,7 @@
         }
 
         inputs.dms.nixosModules.default
+        inputs.stylix.nixosModules.stylix
         inputs.home-manager.nixosModules.default
         {
           home-manager = {

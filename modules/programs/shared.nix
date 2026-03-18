@@ -22,6 +22,8 @@ in
     adw-gtk3
     kdePackages.qt6ct
     (colloid-icon-theme.override { schemeVariants = [ "all" ]; })
+    easyeffects
+    calf
   ];
 
   programs.zsh.enable = true;

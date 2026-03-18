@@ -15,12 +15,14 @@
     ../../modules/hardware/nvidia.nix
     ../../modules/programs/openfortivpn.nix
     ../../modules/desktop/dms.nix
+    ../../modules/desktop/stylix.nix
     ../../modules/hardware/audio.nix
     ../../modules/hardware/bluetooth.nix
     ../../modules/hardware/droidcam.nix
     ../../modules/hardware/logitech.nix
     ../../modules/hardware/printing.nix
     ../../modules/hardware/samsung-speaker-fix.nix
+    ../../modules/hardware/samsung-mic-fix.nix
   ];
 
   # Overlay do kernel CachyOS
