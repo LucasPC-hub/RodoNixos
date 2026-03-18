@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ pkgs, inputs, lib, ... }:
 
 {
   imports = [
@@ -43,7 +43,7 @@
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       gtk-theme = "adw-gtk3-dark";
-      color-scheme = "prefer-dark";
+      color-scheme = lib.mkForce "prefer-dark";
     };
   };
 }
