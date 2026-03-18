@@ -22,7 +22,6 @@
     ../../modules/hardware/logitech.nix
     ../../modules/hardware/printing.nix
     ../../modules/hardware/samsung-speaker-fix.nix
-    ../../modules/hardware/samsung-mic-fix.nix
   ];
 
   # Overlay do kernel CachyOS
