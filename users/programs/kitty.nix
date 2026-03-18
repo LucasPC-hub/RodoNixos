@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 
 {
   programs.kitty = {
@@ -10,7 +10,7 @@
 
       # Window
       window_padding_width = 20;
-      background_opacity = "0.90";
+      background_opacity = lib.mkForce "0.90";
       background_blur = 32;
       hide_window_decorations = true;
       confirm_os_window_close = 0;
