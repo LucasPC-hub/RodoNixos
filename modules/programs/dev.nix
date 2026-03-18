@@ -1,5 +1,20 @@
 { pkgs, ... }:
 
+let
+  withNvidiaOffload = pkg: pkgs.symlinkJoin {
+    name = "${pkg.pname or pkg.name}-nvidia";
+    paths = [ pkg ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      for bin in $out/bin/*; do
+        wrapProgram "$bin" \
+          --set __NV_PRIME_RENDER_OFFLOAD 1 \
+          --set __GLX_VENDOR_LIBRARY_NAME nvidia \
+          --set __VK_LAYER_NV_optimus NVIDIA_only
+      done
+    '';
+  };
+in
 {
   environment.systemPackages = with pkgs; [
     # Ferramentas
@@ -33,7 +48,7 @@
     bruno
 
     # IDEs
-    jetbrains.datagrip
+    (withNvidiaOffload jetbrains.datagrip)
   ];
 
   virtualisation.docker = {
