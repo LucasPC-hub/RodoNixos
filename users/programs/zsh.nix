@@ -31,8 +31,29 @@
 
     initContent = lib.mkMerge [
       (lib.mkBefore ''
-        # zsh-defer — carrega tudo pesado depois do primeiro prompt
-        source ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
+        # zcompile cache — compila plugins pra binário .zwc
+        _zsh_cache="$HOME/.cache/zsh/compiled"
+        [[ -d "$_zsh_cache" ]] || mkdir -p "$_zsh_cache"
+
+        # source compilado: copia do nix store, compila se necessário, e sourcea o .zwc
+        _source_compiled() {
+          local src="$1"
+          local name="''${src:t}"
+          local cached="$_zsh_cache/$name"
+          if [[ ! -f "$cached.zwc" ]] || [[ "$src" -nt "$cached.zwc" ]]; then
+            cp -f "$src" "$cached"
+            zcompile "$cached"
+          fi
+          source "$cached"
+        }
+
+        # zsh-defer (precisa antes de tudo)
+        _source_compiled ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
+
+        # Compila o próprio .zshrc se necessário
+        if [[ ! -f "$HOME/.zshrc.zwc" ]] || [[ "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc" ]]; then
+          zcompile "$HOME/.zshrc"
+        fi
       '')
       ''
       # Opções do shell (leve, não precisa defer)
@@ -74,7 +95,7 @@
       # === TUDO ABAIXO É DEFERIDO (carrega após o prompt) ===
 
       # fzf-tab + compinit (pesado)
-      zsh-defer source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
+      zsh-defer _source_compiled ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
       zsh-defer -c '
         autoload -Uz compinit
         if [[ -n ''${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
@@ -108,7 +129,7 @@
       '
 
       # Syntax highlighting (pesado)
-      zsh-defer source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+      zsh-defer _source_compiled ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
       zsh-defer -c '
         ZSH_HIGHLIGHT_STYLES[dollar-double-quoted-argument]="fg=cyan"
         ZSH_HIGHLIGHT_STYLES[dollar-quoted-argument]="fg=cyan"
@@ -116,11 +137,11 @@
       '
 
       # Autosuggestions
-      zsh-defer source ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+      zsh-defer _source_compiled ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
       zsh-defer -c 'ZSH_AUTOSUGGEST_STRATEGY=(history completion)'
 
       # History substring search
-      zsh-defer source ${pkgs.zsh-history-substring-search}/share/zsh-history-substring-search/zsh-history-substring-search.zsh
+      zsh-defer _source_compiled ${pkgs.zsh-history-substring-search}/share/zsh-history-substring-search/zsh-history-substring-search.zsh
 
       # Carapace completions (cacheado)
       export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
