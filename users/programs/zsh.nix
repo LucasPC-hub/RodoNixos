@@ -36,13 +36,7 @@
       fkr = "cd ~/RodoNixos && niri-sync && sudo nixos-rebuild switch --flake '.#rodolucas'";
     };
 
-    plugins = [
-      {
-        name = "fzf-tab";
-        src = pkgs.zsh-fzf-tab;
-        file = "share/fzf-tab/fzf-tab.plugin.zsh";
-      }
-    ];
+    plugins = [ ];
 
     initContent = lib.mkMerge [
       (lib.mkBefore ''
@@ -54,6 +48,14 @@
       setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
       setopt CORRECT GLOB_DOTS EXTENDED_GLOB NO_BEEP
       setopt COMPLETE_IN_WORD INC_APPEND_HISTORY
+
+      # Cache do compinit - só regenera 1x por dia
+      autoload -Uz compinit
+      if [[ -n ''${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+        compinit
+      else
+        compinit -C
+      fi
 
       # Completion styles
       zstyle ':completion:*' menu select
@@ -94,7 +96,7 @@
       bindkey '^[[H' beginning-of-line
       bindkey '^[[F' end-of-line
 
-      # Funções úteis
+      # Funções úteis (lazy-loaded)
       mkcd() { mkdir -p "$1" && cd "$1" }
 
       extract() {
@@ -138,11 +140,14 @@
       zstyle ':fzf-tab:*' switch-group '<' '>'
       zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:down,shift-tab:up
 
-      # Carapace completions
-      if command -v carapace &>/dev/null; then
-        export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
-        source <(carapace _carapace)
+      # Carapace completions (cacheado)
+      export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+      local _carapace_cache="$HOME/.cache/carapace/init.zsh"
+      if [[ ! -f "$_carapace_cache" ]] || [[ -n "$_carapace_cache"(#qN.mh+24) ]]; then
+        mkdir -p "''${_carapace_cache:h}"
+        carapace _carapace > "$_carapace_cache" 2>/dev/null
       fi
+      [[ -f "$_carapace_cache" ]] && source "$_carapace_cache"
     ''
     ];
   };
