@@ -49,16 +49,11 @@
 
         # zsh-defer (precisa antes de tudo)
         _source_compiled ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
-
-        # Compila o próprio .zshrc se necessário
-        if [[ ! -f "$HOME/.zshrc.zwc" ]] || [[ "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc" ]]; then
-          zcompile "$HOME/.zshrc"
-        fi
       '')
       ''
       # Opções do shell (leve, não precisa defer)
       setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
-      setopt CORRECT GLOB_DOTS EXTENDED_GLOB NO_BEEP
+      setopt GLOB_DOTS EXTENDED_GLOB NO_BEEP
       setopt COMPLETE_IN_WORD INC_APPEND_HISTORY
 
       # Cores (leve, não precisa defer)
@@ -143,6 +138,11 @@
       # History substring search
       zsh-defer _source_compiled ${pkgs.zsh-history-substring-search}/share/zsh-history-substring-search/zsh-history-substring-search.zsh
 
+      # Integrações de programas (deferidas, exceto starship e direnv)
+      zsh-defer -c 'eval "$(${pkgs.zoxide}/bin/zoxide init zsh)"'
+      zsh-defer -c 'eval "$(${pkgs.fzf}/bin/fzf --zsh)"'
+      zsh-defer -c 'eval "$(${pkgs.atuin}/bin/atuin init zsh)"'
+
       # Carapace completions (cacheado)
       export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
       zsh-defer -c '
@@ -189,14 +189,23 @@
     ];
   };
 
-  # Programas que o zsh usa
-  programs.zoxide.enable = true;
+  # Programas que o zsh usa (integrações zsh desabilitadas — carregadas via zsh-defer)
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = false;
+  };
   programs.atuin = {
     enable = true;
-    enableZshIntegration = true;
+    enableZshIntegration = false;
   };
   programs.fzf = {
     enable = true;
+    enableZshIntegration = false;
+  };
+  programs.direnv = {
+    enableZshIntegration = true;
+  };
+  programs.starship = {
     enableZshIntegration = true;
   };
   programs.bat.enable = true;
