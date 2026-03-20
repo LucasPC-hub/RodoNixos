@@ -41,6 +41,14 @@ in
     python312
     python312Packages.pip
 
+    # Electrobun
+    cmake
+    pkg-config
+    gtk3
+    webkitgtk_4_1
+    libayatana-appindicator
+    librsvg
+
     # Rust
     rustup
 
