@@ -3,7 +3,7 @@
 {
   imports = [
     ./programs/kitty.nix
-    ./programs/zsh.nix
+    ./programs/fish.nix
     ./programs/starship.nix
     ./programs/nixvim.nix
     ./programs/obs.nix

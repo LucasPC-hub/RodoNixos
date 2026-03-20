@@ -31,7 +31,7 @@
   users.users.lucasp = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "input" "docker" ];
-    shell = pkgs.zsh;
+    shell = pkgs.fish;
   };
 
   # Kernel params específicos desta máquina

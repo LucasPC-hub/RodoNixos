@@ -3,7 +3,6 @@
 {
   programs.zsh = {
     enable = true;
-    # Desabilitados aqui — carregados via zsh-defer no initContent
     autosuggestion.enable = false;
     syntaxHighlighting.enable = false;
     enableCompletion = false;
@@ -31,130 +30,66 @@
 
     initContent = lib.mkMerge [
       (lib.mkBefore ''
-        # zcompile cache — compila plugins pra binário .zwc
-        _zsh_cache="$HOME/.cache/zsh/compiled"
-        [[ -d "$_zsh_cache" ]] || mkdir -p "$_zsh_cache"
-
-        # source compilado: copia do nix store, compila se necessário, e sourcea o .zwc
-        _source_compiled() {
-          local src="$1"
-          local name="''${src:t}"
-          local cached="$_zsh_cache/$name"
-          if [[ ! -f "$cached.zwc" ]] || [[ "$src" -nt "$cached.zwc" ]]; then
-            cp -f "$src" "$cached"
-            zcompile "$cached"
-          fi
-          source "$cached"
-        }
-
-        # zsh-defer (precisa antes de tudo)
-        _source_compiled ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
+        #============================================
+        # FZF-TAB (carrega antes do compinit!)
+        #============================================
+        source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
       '')
       ''
-      # Opções do shell (leve, não precisa defer)
-      setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
-      setopt GLOB_DOTS EXTENDED_GLOB NO_BEEP
-      setopt COMPLETE_IN_WORD INC_APPEND_HISTORY
+      #============================================
+      # Histórico
+      #============================================
+      setopt HIST_IGNORE_ALL_DUPS HIST_FIND_NO_DUPS HIST_SAVE_NO_DUPS
+      setopt HIST_IGNORE_SPACE SHARE_HISTORY APPEND_HISTORY INC_APPEND_HISTORY
 
-      # Cores (leve, não precisa defer)
+      #============================================
+      # Opções do Shell
+      #============================================
+      setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
+      setopt CORRECT GLOB_DOTS EXTENDED_GLOB NO_BEEP
+      setopt COMPLETE_IN_WORD
+
+      #============================================
+      # Completion System
+      #============================================
+      autoload -Uz compinit
+      if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
+        compinit
+      else
+        compinit -C
+      fi
+
+      zstyle ':completion:*' menu select
+      zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+      zstyle ':completion:*' list-colors "''${(s.:.)LS_COLORS}"
+      zstyle ':completion:*' squeeze-slashes true
+      zstyle ':completion:*' complete-options true
+      zstyle ':completion:*' file-sort modification
+      zstyle ':completion:*:descriptions' format '[%d]'
+      zstyle ':completion:*:warnings' format 'Nada encontrado'
+
+      #============================================
+      # CARAPACE - Completions inteligentes
+      #============================================
+      export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+      zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
+      _carapace_cache="$HOME/.cache/carapace_init.zsh"
+      if [[ ! -f "$_carapace_cache" || "$commands[carapace]" -nt "$_carapace_cache" ]]; then
+        mkdir -p "$HOME/.cache"
+        carapace _carapace > "$_carapace_cache"
+      fi
+      source "$_carapace_cache"
+
+      #============================================
+      # Cores
+      #============================================
+      autoload -U colors && colors
       export CLICOLOR=1
       export LS_COLORS='di=34:ln=35:so=32:pi=33:ex=31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=30;43'
 
-      export FZF_DEFAULT_OPTS="
-        --height 40%
-        --layout=reverse
-        --border
-        --inline-info
-        --color=fg:#c0caf5,bg:#1a1b26,hl:#7aa2f7
-        --color=fg+:#c0caf5,bg+:#292e42,hl+:#7dcfff
-        --color=info:#7aa2f7,prompt:#7dcfff,pointer:#7dcfff
-        --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
-      "
-      export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:500 {}' 2>/dev/null --preview-window right:50%:wrap"
-      export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {} 2>/dev/null' --preview-window right:50%"
-
-      # Desabilita kitty keyboard protocol
-      printf '\e[>4;0m'
-
-      # Key bindings (leve)
-      bindkey -e
-      bindkey '^[[1;5C' forward-word
-      bindkey '^[[1;5D' backward-word
-      bindkey '^[[3~' delete-char
-      bindkey '^[[H' beginning-of-line
-      bindkey '^[[F' end-of-line
-
-      # Paths
-      export PATH="$HOME/.local/bin:$PATH"
-
-      # === TUDO ABAIXO É DEFERIDO (carrega após o prompt) ===
-
-      # fzf-tab + compinit (pesado)
-      zsh-defer _source_compiled ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
-      zsh-defer -c '
-        autoload -Uz compinit
-        if [[ -n ''${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
-          compinit
-        else
-          compinit -C
-        fi
-      '
-
-      # Completion styles (precisa rodar depois do compinit)
-      zsh-defer -c '
-        zstyle ":completion:*" menu select
-        zstyle ":completion:*" matcher-list "m:{a-zA-Z}={A-Za-z}"
-        zstyle ":completion:*" list-colors "''${(s.:.)LS_COLORS}"
-        zstyle ":completion:*" squeeze-slashes true
-        zstyle ":completion:*" complete-options true
-        zstyle ":completion:*" file-sort modification
-        zstyle ":completion:*:descriptions" format "[%d]"
-        zstyle ":completion:*:warnings" format "Nada encontrado"
-      '
-
-      # fzf-tab config (depois do fzf-tab carregar)
-      zsh-defer -c '
-        zstyle ":completion:*:git-checkout:*" sort false
-        zstyle ":fzf-tab:complete:cd:*" fzf-preview "eza -1 --color=always \$realpath 2>/dev/null || ls -1 --color=always \$realpath"
-        zstyle ":fzf-tab:complete:z:*" fzf-preview "eza -1 --color=always \$realpath 2>/dev/null || ls -1 --color=always \$realpath"
-        zstyle ":fzf-tab:complete:*:*" fzf-preview "bat --color=always --style=numbers --line-range=:500 \$realpath 2>/dev/null || cat \$realpath 2>/dev/null"
-        zstyle ":fzf-tab:*" fzf-min-height 20
-        zstyle ":fzf-tab:*" switch-group "<" ">"
-        zstyle ":fzf-tab:*" fzf-flags --color=fg:1,fg+:2 --bind=tab:down,shift-tab:up
-      '
-
-      # Syntax highlighting (pesado)
-      zsh-defer _source_compiled ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-      zsh-defer -c '
-        ZSH_HIGHLIGHT_STYLES[dollar-double-quoted-argument]="fg=cyan"
-        ZSH_HIGHLIGHT_STYLES[dollar-quoted-argument]="fg=cyan"
-        ZSH_HIGHLIGHT_STYLES[assign]="fg=cyan"
-      '
-
-      # Autosuggestions
-      zsh-defer _source_compiled ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-      zsh-defer -c 'ZSH_AUTOSUGGEST_STRATEGY=(history completion)'
-
-      # History substring search
-      zsh-defer _source_compiled ${pkgs.zsh-history-substring-search}/share/zsh-history-substring-search/zsh-history-substring-search.zsh
-
-      # Integrações de programas (deferidas, exceto starship e direnv)
-      zsh-defer -c 'eval "$(${pkgs.zoxide}/bin/zoxide init zsh)"'
-      zsh-defer -c 'eval "$(${pkgs.fzf}/bin/fzf --zsh)"'
-      zsh-defer -c 'eval "$(${pkgs.atuin}/bin/atuin init zsh)"'
-
-      # Carapace completions (cacheado)
-      export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
-      zsh-defer -c '
-        local _carapace_cache="$HOME/.cache/carapace/init.zsh"
-        if [[ ! -f "$_carapace_cache" ]] || [[ -n "$_carapace_cache"(#qN.mh+24) ]]; then
-          mkdir -p "''${_carapace_cache:h}"
-          carapace _carapace > "$_carapace_cache" 2>/dev/null
-        fi
-        [[ -f "$_carapace_cache" ]] && source "$_carapace_cache"
-      '
-
+      #============================================
       # Funções úteis
+      #============================================
       mkcd() { mkdir -p "$1" && cd "$1" }
 
       extract() {
@@ -185,11 +120,123 @@
         git commit -m "$commit_msg
       $file_status"
       }
+
+      #============================================
+      # FZF
+      #============================================
+      export FZF_DEFAULT_OPTS="
+        --height 40%
+        --layout=reverse
+        --border
+        --inline-info
+        --color=fg:#c0caf5,bg:#1a1b26,hl:#7aa2f7
+        --color=fg+:#c0caf5,bg+:#292e42,hl+:#7dcfff
+        --color=info:#7aa2f7,prompt:#7dcfff,pointer:#7dcfff
+        --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
+      "
+      export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:500 {}' 2>/dev/null --preview-window right:50%:wrap"
+      export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {} 2>/dev/null' --preview-window right:50%"
+
+      #============================================
+      # Syntax Highlighting
+      #============================================
+      source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+      typeset -A ZSH_HIGHLIGHT_STYLES
+      ZSH_HIGHLIGHT_STYLES[default]='none'
+      ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
+      ZSH_HIGHLIGHT_STYLES[reserved-word]='fg=yellow'
+      ZSH_HIGHLIGHT_STYLES[alias]='fg=green'
+      ZSH_HIGHLIGHT_STYLES[builtin]='fg=green'
+      ZSH_HIGHLIGHT_STYLES[function]='fg=green'
+      ZSH_HIGHLIGHT_STYLES[command]='fg=green'
+      ZSH_HIGHLIGHT_STYLES[precommand]='fg=green,underline'
+      ZSH_HIGHLIGHT_STYLES[commandseparator]='none'
+      ZSH_HIGHLIGHT_STYLES[hashed-command]='fg=green'
+      ZSH_HIGHLIGHT_STYLES[path]='underline'
+      ZSH_HIGHLIGHT_STYLES[globbing]='fg=blue'
+      ZSH_HIGHLIGHT_STYLES[history-expansion]='fg=blue'
+      ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=magenta'
+      ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=magenta'
+      ZSH_HIGHLIGHT_STYLES[back-quoted-argument]='none'
+      ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=yellow'
+      ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=yellow'
+      ZSH_HIGHLIGHT_STYLES[dollar-double-quoted-argument]='fg=cyan'
+      ZSH_HIGHLIGHT_STYLES[back-double-quoted-argument]='fg=cyan'
+      ZSH_HIGHLIGHT_STYLES[assign]='none'
+
+      #============================================
+      # Autosuggestions
+      #============================================
+      source ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+      ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+      ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+      ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+
+      #============================================
+      # Key Bindings
+      #============================================
+      bindkey -e
+      bindkey '^[[1;5C' forward-word
+      bindkey '^[[1;5D' backward-word
+      bindkey '^[[3~' delete-char
+      bindkey '^[[H' beginning-of-line
+      bindkey '^[[F' end-of-line
+
+      # Desabilita kitty keyboard protocol
+      printf '\e[>4;0m'
+
+      #============================================
+      # _cache_eval - cacheia output de comandos init
+      #============================================
+      _cache_eval() {
+        local cache="$HOME/.cache/zsh_''${1}.zsh"
+        if [[ ! -f "$cache" ]]; then
+          mkdir -p "$HOME/.cache"
+          "$@" > "$cache"
+        fi
+        source "$cache"
+      }
+
+      #============================================
+      # Starship Prompt
+      #============================================
+      _cache_eval starship init zsh
+
+      #============================================
+      # Zoxide
+      #============================================
+      _cache_eval zoxide init zsh
+
+      #============================================
+      # Atuin
+      #============================================
+      eval "$(atuin init zsh)"
+      export ATUIN_NOBIND="true"
+      bindkey '^r' _atuin_search_widget
+      bindkey '^[[A' _atuin_search_widget
+      bindkey '^[OA' _atuin_search_widget
+
+      #============================================
+      # FZF-TAB Config
+      #============================================
+      zstyle ':completion:*:git-checkout:*' sort false
+      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath 2>/dev/null || ls -1 --color=always $realpath'
+      zstyle ':fzf-tab:complete:z:*' fzf-preview 'eza -1 --color=always $realpath 2>/dev/null || ls -1 --color=always $realpath'
+      zstyle ':fzf-tab:complete:*:*' fzf-preview 'bat --color=always --style=numbers --line-range=:500 $realpath 2>/dev/null || cat $realpath 2>/dev/null'
+      zstyle ':fzf-tab:*' fzf-min-height 20
+      zstyle ':fzf-tab:*' switch-group '<' '>'
+      zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:down,shift-tab:up
+
+      #============================================
+      # Paths
+      #============================================
+      export PATH="$HOME/.local/bin:$PATH"
+      setopt interactivecomments
     ''
     ];
   };
 
-  # Programas que o zsh usa (integrações zsh desabilitadas — carregadas via zsh-defer)
+  # Programas (integrações zsh desabilitadas — gerenciadas manualmente acima)
   programs.zoxide = {
     enable = true;
     enableZshIntegration = false;
@@ -203,16 +250,15 @@
     enableZshIntegration = false;
   };
   programs.direnv = {
-    enableZshIntegration = true;
+    enableZshIntegration = false;
   };
   programs.starship = {
-    enableZshIntegration = true;
+    enableZshIntegration = false;
   };
   programs.bat.enable = true;
   programs.eza.enable = true;
 
   home.packages = with pkgs; [
     carapace
-    zsh-defer
   ];
 }
