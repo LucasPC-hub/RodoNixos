@@ -59,6 +59,21 @@ in
     (withNvidiaOffload jetbrains.datagrip)
   ];
 
+  # Permitir binários dinâmicos (ex: electrobun, vscode extensions)
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    stdenv.cc.cc.lib
+    gtk3
+    webkitgtk_4_1
+    glib
+    cairo
+    pango
+    gdk-pixbuf
+    libsoup_3
+    at-spi2-atk
+    harfbuzz
+  ];
+
   virtualisation.docker = {
     enable = true;
     enableOnBoot = true;

@@ -144,15 +144,18 @@ $file_status"
       end
 
       bind \cr _fish_fzf_history
-      bind \t _fish_fzf_history
-
-      # Seta pra cima: abre atuin com fzf
       bind up _fish_fzf_history
 
       #============================================
       # Desabilita kitty keyboard protocol
       #============================================
       printf '\e[>4;0m'
+
+      #============================================
+      # fifc - fzf tab completion com preview
+      #============================================
+      set -g fifc_fd_opts --hidden
+      set -g fifc_bat_opts --style=numbers
 
       #============================================
       # Paths
@@ -187,5 +190,6 @@ $file_status"
   home.packages = with pkgs; [
     carapace
     fishPlugins.fzf-fish
+    fishPlugins.fifc
   ];
 }
