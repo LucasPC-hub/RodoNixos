@@ -59,20 +59,6 @@ in
     (withNvidiaOffload jetbrains.datagrip)
   ];
 
-  # PKG_CONFIG_PATH para Tauri/Cargo encontrar as libs do sistema
-  environment.sessionVariables.PKG_CONFIG_PATH = builtins.concatStringsSep ":" (map (pkg: "${pkg.dev or pkg}/lib/pkgconfig") (with pkgs; [
-    gtk3
-    webkitgtk_4_1
-    glib
-    cairo
-    pango
-    gdk-pixbuf
-    libsoup_3
-    at-spi2-atk
-    harfbuzz
-    openssl
-  ]));
-
   # Permitir binários dinâmicos (ex: electrobun, vscode extensions)
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
