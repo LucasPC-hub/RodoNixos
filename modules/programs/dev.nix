@@ -72,6 +72,7 @@ in
     libsoup_3
     at-spi2-atk
     harfbuzz
+    libayatana-appindicator
   ];
 
   virtualisation.docker = {

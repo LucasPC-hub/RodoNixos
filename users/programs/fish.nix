@@ -136,7 +136,7 @@ $file_status"
 
       # Busca histórico do fish via fzf
       function _fish_fzf_history
-        set -l output (history | fzf --height 40% --layout=reverse --border --query (commandline -b))
+        set -l output (history | fzf --height 40% --layout=default --border --query (commandline -b))
         if test -n "$output"
           commandline -r $output
         end
