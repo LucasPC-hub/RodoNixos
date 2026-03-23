@@ -61,6 +61,9 @@ in
     (withNvidiaOffload jetbrains.datagrip)
   ];
 
+  # GSettings/dconf for GTK apps (file dialogs, etc.)
+  programs.dconf.enable = true;
+
   # Permitir binários dinâmicos (ex: electrobun, vscode extensions)
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
