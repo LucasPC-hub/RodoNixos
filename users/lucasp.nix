@@ -34,6 +34,7 @@
     tidal-hifi
     (withNvidiaOffload jetbrains.webstorm)
     zed-editor
+    opencode
   ];
 
   programs.dsearch.enable = true;
@@ -45,6 +46,8 @@
     BROWSER = "zen-beta";
     FILES = "thunar";
     NIXOS_OZONE_WL = "1";
+    GSETTINGS_SCHEMA_DIR = "${pkgs.gsettings-desktop-schemas}/share/glib-2.0/schemas";
+    XDG_DATA_DIRS = "$XDG_DATA_DIRS:${pkgs.gsettings-desktop-schemas}/share:${pkgs.shared-mime-info}/share";
   };
 
   # Cedilha (ç/Ç) com dead_acute + c

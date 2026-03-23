@@ -48,6 +48,8 @@ in
     webkitgtk_4_1
     libayatana-appindicator
     librsvg
+    gsettings-desktop-schemas
+    shared-mime-info
 
     # Rust
     rustup
