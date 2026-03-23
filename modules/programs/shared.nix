@@ -26,6 +26,7 @@ in
     easyeffects
     calf
     bubblewrap
+    wl-clipboard # needed for image paste in Claude Code
   ];
 
   programs.fish.enable = true;
