@@ -64,6 +64,12 @@ in
   # GSettings/dconf for GTK apps (file dialogs, etc.)
   programs.dconf.enable = true;
 
+  # System-level GSettings schema paths for GTK file dialogs (Electrobun, Tauri, etc.)
+  environment.sessionVariables = {
+    GSETTINGS_SCHEMA_DIR = "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
+    XDG_DATA_DIRS = "$XDG_DATA_DIRS:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}";
+  };
+
   # Permitir binários dinâmicos (ex: electrobun, vscode extensions)
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [

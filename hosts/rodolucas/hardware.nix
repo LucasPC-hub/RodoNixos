@@ -26,7 +26,7 @@
   fileSystems."/media/lucasp/windows" = {
     device = "/dev/disk/by-uuid/6E4AF25A4AF21E91";
     fsType = "ntfs-3g";
-    options = [ "rw" "uid=1000" "gid=100" "nofail" "remove_hiberfile" ];
+    options = [ "rw" "uid=1000" "gid=100" "nofail" "x-systemd.automount" "remove_hiberfile" ];
   };
 
   swapDevices = [{
