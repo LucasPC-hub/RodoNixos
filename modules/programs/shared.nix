@@ -17,7 +17,16 @@ in
     pciutils
     inputs.claude-code.packages.${system}.default
     claude-desktop
-    inputs.zen-browser.packages.${system}.default
+    (pkgs.symlinkJoin {
+      name = "zen-browser-wrapped";
+      paths = [ inputs.zen-browser.packages.${system}.default ];
+      buildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        for bin in $out/bin/*; do
+          wrapProgram "$bin" --unset GDK_SCALE --unset GDK_DPI_SCALE
+        done
+      '';
+    })
     discord
     thunar
     adw-gtk3
