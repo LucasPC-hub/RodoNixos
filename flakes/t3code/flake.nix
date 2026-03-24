@@ -26,10 +26,10 @@
             appimageContents = pkgs.appimageTools.extractType2 { inherit pname version src; };
           in ''
             # Desktop entry & icon
-            install -Dm444 ${appimageContents}/t3-code.desktop $out/share/applications/t3-code.desktop
+            install -Dm444 ${appimageContents}/t3-code-desktop.desktop $out/share/applications/t3-code.desktop
             substituteInPlace $out/share/applications/t3-code.desktop \
               --replace-fail 'Exec=AppRun' 'Exec=t3code'
-            cp -r ${appimageContents}/usr/share/icons $out/share/icons 2>/dev/null || true
+            install -Dm444 ${appimageContents}/t3-code-desktop.png $out/share/icons/hicolor/512x512/apps/t3code.png
           '';
 
         extraPkgs = p: with p; [
