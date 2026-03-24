@@ -568,6 +568,7 @@
         "nixvim": "nixvim",
         "quickshell": "quickshell",
         "stylix": "stylix",
+        "t3code": "t3code",
         "zen-browser": "zen-browser"
       }
     },
@@ -649,6 +650,22 @@
         "repo": "default",
         "type": "github"
       }
+    },
+    "t3code": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./flakes/t3code",
+        "type": "path"
+      },
+      "original": {
+        "path": "./flakes/t3code",
+        "type": "path"
+      },
+      "parent": []
     },
     "tinted-foot": {
       "flake": false,

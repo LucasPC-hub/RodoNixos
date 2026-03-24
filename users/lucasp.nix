@@ -21,6 +21,7 @@
     tidal-hifi
     zed-editor
     opencode
+    inputs.t3code.packages.${pkgs.system}.default
   ];
 
   programs.dsearch.enable = true;
