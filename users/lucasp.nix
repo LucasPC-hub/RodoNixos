@@ -4,6 +4,7 @@
   imports = [
     ./shared.nix
     ./programs/dms-config.nix
+    ./programs/jetbrains.nix
     inputs.nixvim.homeModules.nixvim
     inputs.dsearch.homeModules.default
   ];
@@ -13,26 +14,11 @@
   home.stateVersion = "25.05";
 
   # Pacotes só meus
-  home.packages = let
-    withNvidiaOffload = pkg: pkgs.symlinkJoin {
-      name = "${pkg.pname or pkg.name}-nvidia";
-      paths = [ pkg ];
-      buildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        for bin in $out/bin/*; do
-          wrapProgram "$bin" \
-            --set __NV_PRIME_RENDER_OFFLOAD 1 \
-            --set __GLX_VENDOR_LIBRARY_NAME nvidia \
-            --set __VK_LAYER_NV_optimus NVIDIA_only
-          done
-      '';
-    };
-  in with pkgs; [
+  home.packages = with pkgs; [
     protonmail-desktop
     proton-pass
     protonvpn-gui
     tidal-hifi
-    (withNvidiaOffload jetbrains.webstorm)
     zed-editor
     opencode
   ];
