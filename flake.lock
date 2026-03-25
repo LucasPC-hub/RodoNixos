@@ -140,6 +140,22 @@
         "type": "github"
       }
     },
+    "cmux": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./flakes/cmux",
+        "type": "path"
+      },
+      "original": {
+        "path": "./flakes/cmux",
+        "type": "path"
+      },
+      "parent": []
+    },
     "dms": {
       "inputs": {
         "nixpkgs": [
@@ -560,6 +576,7 @@
       "inputs": {
         "claude-code": "claude-code",
         "claude-desktop": "claude-desktop",
+        "cmux": "cmux",
         "dms": "dms",
         "dsearch": "dsearch",
         "home-manager": "home-manager",
