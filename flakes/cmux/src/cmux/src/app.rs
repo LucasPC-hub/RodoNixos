@@ -53,6 +53,25 @@ impl AppState {
         terminal.set_vexpand(true);
         terminal.set_scrollback_lines(10000);
 
+        // Track terminal title changes → update workspace process_title
+        {
+            let shared = self.shared.clone();
+            let pid = panel_id;
+            terminal.connect_window_title_changed(move |term| {
+                if let Some(title) = term.window_title() {
+                    let title = title.to_string();
+                    if !title.is_empty() {
+                        let mut tab_manager = lock_or_recover(&shared.tab_manager);
+                        if let Some(ws) = tab_manager.find_workspace_with_panel_mut(pid) {
+                            ws.process_title = title;
+                        }
+                        drop(tab_manager);
+                        shared.notify_ui_refresh();
+                    }
+                }
+            });
+        }
+
         // Spawn shell
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
         let shell_args: Vec<&str> = vec![&shell];

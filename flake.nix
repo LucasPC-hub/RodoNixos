@@ -53,7 +53,7 @@
     };
 
     cmux = {
-      url = "path:./flakes/cmux";
+      url = "github:LucasPC-hub/cmux-linux";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

@@ -147,14 +147,18 @@
         ]
       },
       "locked": {
-        "path": "./flakes/cmux",
-        "type": "path"
+        "lastModified": 1774452395,
+        "narHash": "sha256-yGn3qh0KhptH/QWAiTTK3Rv0mTZBLNuqRhOYAwx8hEE=",
+        "owner": "LucasPC-hub",
+        "repo": "cmux-linux",
+        "rev": "4be3d0f07514f3a24f36f5222905d9ed0c165226",
+        "type": "github"
       },
       "original": {
-        "path": "./flakes/cmux",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "LucasPC-hub",
+        "repo": "cmux-linux",
+        "type": "github"
+      }
     },
     "dms": {
       "inputs": {
