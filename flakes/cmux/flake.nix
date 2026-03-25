@@ -45,7 +45,7 @@
 
         cargoHash = "sha256-/f7QHOPu8deeCvOjUabQPMqNJbjxuQj0DUAS7MAU9eE=";
 
-        buildFeatures = [ "ghostty-sys/link-ghostty" ];
+        buildFeatures = [ "link-ghostty" ];
 
         nativeBuildInputs = with pkgs; [
           pkg-config

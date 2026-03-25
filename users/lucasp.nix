@@ -21,6 +21,7 @@
     tidal-hifi
     zed-editor
     opencode
+    ghostty
     inputs.t3code.packages.${pkgs.system}.default
     inputs.cmux.packages.${pkgs.system}.default
   ];
