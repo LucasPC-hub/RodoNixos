@@ -39,5 +39,9 @@ in
   ];
 
   programs.fish.enable = true;
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
   security.polkit.enable = true;
 }
