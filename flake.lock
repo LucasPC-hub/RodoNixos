@@ -147,16 +147,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1774550225,
-        "narHash": "sha256-cA6NpjqrvuGH+a7O/VJ5AZKP3q3XlKezBagaTcXvZBg=",
+        "lastModified": 1774631929,
+        "narHash": "sha256-2PJ3c74jHK36pgpbavpDP6pQ4v9/bn51UZEc2hC8f1I=",
         "owner": "LucasPC-hub",
-        "repo": "cmux-linux",
-        "rev": "c22d36b42840f9a765d7612e49c68e4d78b6f59f",
+        "repo": "lcmux",
+        "rev": "cbb6957caae75f85cb0c2b0b7f325ca2e7cc0525",
         "type": "github"
       },
       "original": {
         "owner": "LucasPC-hub",
-        "repo": "cmux-linux",
+        "repo": "lcmux",
         "type": "github"
       }
     },

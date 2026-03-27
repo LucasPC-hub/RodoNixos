@@ -1,4 +1,4 @@
-//! cmux CLI — command-line client for the cmux socket API.
+//! lcmux CLI — command-line client for the lcmux socket API.
 
 use clap::{Parser, Subcommand};
 use serde_json::Value;
@@ -13,7 +13,7 @@ const MAX_RESPONSE_LEN: usize = 1024 * 1024;
 static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Parser)]
-#[command(name = "cmux", about = "cmux terminal multiplexer CLI")]
+#[command(name = "lcmux", about = "lcmux terminal multiplexer CLI")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -29,7 +29,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Ping the cmux server
+    /// Ping the lcmux server
     Ping,
 
     /// Workspace management
@@ -249,10 +249,10 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Send a v2 request to the cmux socket and return the response.
+/// Send a v2 request to the lcmux socket and return the response.
 fn send_request(socket_path: &str, method: &str, params: Value) -> anyhow::Result<Value> {
     let mut stream = UnixStream::connect(socket_path)
-        .map_err(|e| anyhow::anyhow!("Cannot connect to cmux at {}: {}", socket_path, e))?;
+        .map_err(|e| anyhow::anyhow!("Cannot connect to lcmux at {}: {}", socket_path, e))?;
     stream.set_read_timeout(Some(IO_TIMEOUT))?;
     stream.set_write_timeout(Some(IO_TIMEOUT))?;
 
@@ -273,10 +273,10 @@ fn send_request(socket_path: &str, method: &str, params: Value) -> anyhow::Resul
     let mut line = String::new();
     let bytes_read = reader.read_line(&mut line)?;
     if bytes_read == 0 {
-        anyhow::bail!("cmux closed socket without a response");
+        anyhow::bail!("lcmux closed socket without a response");
     }
     if line.len() > MAX_RESPONSE_LEN {
-        anyhow::bail!("cmux response exceeded {} bytes", MAX_RESPONSE_LEN);
+        anyhow::bail!("lcmux response exceeded {} bytes", MAX_RESPONSE_LEN);
     }
 
     let response: Value = serde_json::from_str(line.trim())?;
@@ -290,13 +290,13 @@ fn default_socket_path() -> String {
             if let Ok(meta) = std::fs::metadata(path) {
                 let my_uid = unsafe { libc::getuid() };
                 if meta.is_dir() && meta.uid() == my_uid && (meta.mode() & 0o777) == 0o700 {
-                    return format!("{}/cmux.sock", dir);
+                    return format!("{}/lcmux.sock", dir);
                 }
             }
         }
     }
 
-    format!("/tmp/cmux-{}.sock", unsafe { libc::getuid() })
+    format!("/tmp/lcmux-{}.sock", unsafe { libc::getuid() })
 }
 
 /// Pretty-print a response for human consumption.

@@ -24,7 +24,7 @@ pub fn create_window(
 
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .title("cmux")
+        .title("LCmux")
         .default_width(1280)
         .default_height(860)
         .build();
@@ -126,7 +126,7 @@ fn build_app_menu() -> gio::Menu {
 
     // App section
     let app_section = gio::Menu::new();
-    app_section.append(Some("About cmux"), Some("win.about"));
+    app_section.append(Some("About LCmux"), Some("win.about"));
     app_section.append(Some("Quit"), Some("app.quit"));
     menu.append_section(None, &app_section);
 
@@ -219,6 +219,13 @@ fn install_actions(
     add_action!("split-browser-right", "<Ctrl><Shift>b", |state: &Rc<AppState>, lb: &gtk4::ListBox, cb: &gtk4::Box| {
         if let Some(workspace) = lock_or_recover(&state.shared.tab_manager).selected_mut() {
             workspace.split(SplitOrientation::Horizontal, PanelType::Browser);
+        }
+        refresh_ui(lb, cb, state);
+    });
+
+    add_action!("split-browser-down", "<Ctrl><Shift>n", |state: &Rc<AppState>, lb: &gtk4::ListBox, cb: &gtk4::Box| {
+        if let Some(workspace) = lock_or_recover(&state.shared.tab_manager).selected_mut() {
+            workspace.split(SplitOrientation::Vertical, PanelType::Browser);
         }
         refresh_ui(lb, cb, state);
     });
@@ -321,13 +328,13 @@ fn install_actions(
         let w = window.clone();
         action.connect_activate(move |_, _| {
             let about = adw::AboutDialog::builder()
-                .application_name("cmux")
+                .application_name("LCmux")
                 .version("0.1.0")
                 .developer_name("LucasPC-hub")
                 .license_type(gtk4::License::Agpl30)
-                .website("https://github.com/LucasPC-hub/cmux-linux")
-                .issue_url("https://github.com/LucasPC-hub/cmux-linux/issues")
-                .comments("Terminal multiplexer for AI coding agents.\nLinux/VTE fork of cmux by Manaflow.")
+                .website("https://github.com/LucasPC-hub/lcmux")
+                .issue_url("https://github.com/LucasPC-hub/lcmux/issues")
+                .comments("LCmux — terminal multiplexer for AI coding agents.\nBased on cmux by Manaflow (https://github.com/manaflow-ai/cmux), licensed under AGPL-3.0.")
                 .build();
             about.present(Some(&w));
         });

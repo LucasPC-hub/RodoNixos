@@ -1,5 +1,5 @@
 {
-  description = "cmux - terminal multiplexer for AI coding agents (Linux/VTE)";
+  description = "LCmux - terminal multiplexer for AI coding agents (fork of cmux by Manaflow)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -10,14 +10,14 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 
-      pname = "cmux";
+      pname = "lcmux";
       version = "0.1.0";
 
       cmux = pkgs.rustPlatform.buildRustPackage {
         inherit pname version;
         src = ./.;
 
-        cargoHash = "sha256-X9jIXBx6HlpUyoh/wPxW5bj7G9EkmNzyHu3jikpw4/U=";
+        cargoHash = "sha256-MXLXCEDNNKh04O91kgQfj/9H3b9d3MCt6+FoOcEYUCs=";
 
         nativeBuildInputs = with pkgs; [
           pkg-config
@@ -34,11 +34,18 @@
           graphene
           openssl
           vte-gtk4
+          webkitgtk_6_0
+          glib-networking
         ];
 
+        postInstall = ''
+          install -Dm644 data/lcmux.desktop $out/share/applications/lcmux.desktop
+          install -Dm644 data/lcmux.svg $out/share/icons/hicolor/scalable/apps/lcmux.svg
+        '';
+
         meta = with pkgs.lib; {
-          description = "Terminal multiplexer for AI coding agents (Linux/VTE)";
-          homepage = "https://github.com/LucasPC-hub/cmux-linux";
+          description = "LCmux — terminal multiplexer for AI coding agents (fork of cmux by Manaflow)";
+          homepage = "https://github.com/LucasPC-hub/lcmux";
           license = licenses.agpl3Only;
           platforms = [ "x86_64-linux" ];
         };

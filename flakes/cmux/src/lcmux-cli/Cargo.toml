@@ -1,11 +1,11 @@
 [package]
-name = "cmux-cli"
+name = "lcmux-cli"
 version = "0.1.0"
 edition.workspace = true
-description = "CLI client for cmux terminal multiplexer"
+description = "CLI client for LCmux terminal multiplexer — fork of cmux by Manaflow"
 
 [[bin]]
-name = "cmux"
+name = "lcmux"
 path = "src/main.rs"
 
 [dependencies]

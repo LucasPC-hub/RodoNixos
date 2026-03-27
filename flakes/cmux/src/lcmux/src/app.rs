@@ -55,6 +55,33 @@ impl AppState {
         terminal.set_vexpand(true);
         terminal.set_scrollback_lines(10000);
 
+        // Terminal color palette (Ghostty default)
+        let parse = |hex: &str| -> gdk4::RGBA {
+            gdk4::RGBA::parse(hex).unwrap()
+        };
+        let fg = parse("#c5c8c6");
+        let bg = parse("#1d1f21");
+        let palette = [
+            parse("#1d1f21"), // black
+            parse("#cc6666"), // red
+            parse("#b5bd68"), // green
+            parse("#f0c674"), // yellow
+            parse("#81a2be"), // blue
+            parse("#b294bb"), // magenta
+            parse("#8abeb7"), // cyan
+            parse("#c5c8c6"), // white
+            parse("#666666"), // bright black
+            parse("#d54e53"), // bright red
+            parse("#b9ca4a"), // bright green
+            parse("#e7c547"), // bright yellow
+            parse("#7aa6da"), // bright blue
+            parse("#c397d8"), // bright magenta
+            parse("#70c0b1"), // bright cyan
+            parse("#eaeaea"), // bright white
+        ];
+        let palette_refs: Vec<&gdk4::RGBA> = palette.iter().collect();
+        terminal.set_colors(Some(&fg), Some(&bg), &palette_refs);
+
         // Track terminal title changes → update workspace process_title
         {
             let shared = self.shared.clone();
@@ -275,7 +302,7 @@ impl SharedState {
 /// Run the GTK application. Returns the exit code.
 pub fn run() -> i32 {
     let app = adw::Application::builder()
-        .application_id("ai.manaflow.cmux")
+        .application_id("dev.lucasp.lcmux")
         .build();
 
     let shared = Arc::new(SharedState::new());

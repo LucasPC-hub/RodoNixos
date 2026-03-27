@@ -1,11 +1,11 @@
 [package]
-name = "cmux"
+name = "lcmux"
 version = "0.1.0"
 edition.workspace = true
-description = "cmux terminal multiplexer for Linux (GTK4/libadwaita)"
+description = "LCmux terminal multiplexer for Linux (GTK4/libadwaita) — fork of cmux by Manaflow"
 
 [[bin]]
-name = "cmux-app"
+name = "lcmux-app"
 path = "src/main.rs"
 
 [dependencies]

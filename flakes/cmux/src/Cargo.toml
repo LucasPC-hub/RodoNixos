@@ -1,14 +1,14 @@
 [workspace]
 members = [
-    "cmux",
-    "cmux-cli",
+    "lcmux",
+    "lcmux-cli",
 ]
 resolver = "2"
 
 [workspace.package]
 edition = "2021"
-license = "MIT"
-repository = "https://github.com/manaflow-ai/cmux"
+license = "AGPL-3.0-only"
+repository = "https://github.com/LucasPC-hub/lcmux"
 
 [workspace.dependencies]
 # GTK4 / libadwaita (versions matched to vte4 0.10)

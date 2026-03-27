@@ -35,7 +35,7 @@ pub fn socket_path() -> String {
                 use std::os::unix::fs::MetadataExt;
                 let my_uid = unsafe { libc::getuid() };
                 if meta.is_dir() && meta.uid() == my_uid && (meta.mode() & 0o777) == 0o700 {
-                    return format!("{}/cmux.sock", dir);
+                    return format!("{}/lcmux.sock", dir);
                 }
             }
             tracing::warn!(
@@ -44,7 +44,7 @@ pub fn socket_path() -> String {
             );
         }
     }
-    format!("/tmp/cmux-{}.sock", unsafe { libc::getuid() })
+    format!("/tmp/lcmux-{}.sock", unsafe { libc::getuid() })
 }
 
 /// Run the socket server. This should be called from a tokio runtime
