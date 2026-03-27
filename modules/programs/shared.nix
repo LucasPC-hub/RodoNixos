@@ -8,10 +8,14 @@ in
   environment.systemPackages = with pkgs; [
     git
     vim
+    neovim
     wget
     curl
     htop
     unzip
+    ripgrep
+    fd
+    fzf
     jq
     tree
     pciutils

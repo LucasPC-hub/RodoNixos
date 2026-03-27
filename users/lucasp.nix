@@ -5,7 +5,6 @@
     ./shared.nix
     ./programs/dms-config.nix
     ./programs/jetbrains.nix
-    inputs.nixvim.homeModules.nixvim
     inputs.dsearch.homeModules.default
   ];
 

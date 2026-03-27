@@ -5,7 +5,6 @@
     ./programs/kitty.nix
     ./programs/fish.nix
     ./programs/starship.nix
-    ./programs/nixvim.nix
     ./programs/obs.nix
     ./programs/fastfetch.nix
     ./programs/vscode.nix
