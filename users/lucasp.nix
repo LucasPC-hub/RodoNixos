@@ -16,13 +16,13 @@
   home.packages = with pkgs; [
     protonmail-desktop
     proton-pass
-    protonvpn-gui
+    proton-vpn
     tidal-hifi
     zed-editor
     opencode
     ghostty
-    inputs.t3code.packages.${pkgs.system}.default
-    inputs.cmux.packages.${pkgs.system}.default
+    inputs.t3code.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.cmux.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   programs.dsearch.enable = true;
