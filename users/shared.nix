@@ -8,6 +8,7 @@
     ./programs/obs.nix
     ./programs/fastfetch.nix
     ./programs/vscode.nix
+    ./programs/yazi.nix
   ];
 
   programs.git.enable = true;
