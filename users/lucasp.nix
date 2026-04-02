@@ -24,6 +24,7 @@
     ghostty
     inputs.t3code.packages.${pkgs.stdenv.hostPlatform.system}.default
     inputs.cmux.packages.${pkgs.stdenv.hostPlatform.system}.default
+    jamesdsp
   ];
 
   programs.dsearch.enable = true;
