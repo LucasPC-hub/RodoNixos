@@ -4,6 +4,7 @@
   programs.yazi = {
     enable = true;
     enableFishIntegration = true; # wrapper 'y' que faz cd ao sair
+    shellWrapperName = "y";
 
     settings = {
       manager = {

@@ -8,7 +8,7 @@ stdenv.mkDerivation {
     owner = "Andycodeman";
     repo = "samsung-galaxy-book4-linux-fixes";
     rev = "main";
-    hash = "sha256-uGwYuyKAlz8TM7SwcEGBEyORQg15z8DMwHRxcVzmbN0=";
+    hash = "sha256-T1ZX6bUeH9lI6QHuoKz+QBRmAZgyd+D04DkU5OyGvbw=";
   };
 
   sourceRoot = "source/speaker-fix/src";
