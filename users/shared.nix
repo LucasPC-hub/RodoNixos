@@ -9,6 +9,7 @@
     ./programs/fastfetch.nix
     ./programs/vscode.nix
     ./programs/yazi.nix
+    ./programs/dms-config.nix
   ];
 
   programs.git.enable = true;

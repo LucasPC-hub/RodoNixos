@@ -3,7 +3,7 @@
 {
   imports = [
     ./shared.nix
-    ./programs/dms-config.nix
+    ./programs/niri-sync.nix
     ./programs/jetbrains.nix
     inputs.dsearch.homeModules.default
   ];

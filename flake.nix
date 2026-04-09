@@ -109,11 +109,10 @@
         users = { lucasp = ./users/lucasp.nix; };
       };
 
-      # Exemplo pra adicionar outro host:
-      # fulano = mkHost {
-      #   hostPath = ./hosts/fulano;
-      #   users = { fulano = ./users/fulano.nix; };
-      # };
+      laal = mkHost {
+        hostPath = ./hosts/laal;
+        users = { laal = ./users/laal.nix; };
+      };
     };
   };
 }
