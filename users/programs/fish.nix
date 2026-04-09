@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, osConfig, ... }:
 
 {
   programs.fish = {
@@ -9,10 +9,18 @@
       ll = "eza -la --icons";
       lt = "eza --tree --level=2 --icons";
       cat = "bat";
-      fkr = "cd ~/RodoNixos && niri-sync && sudo nixos-rebuild switch --flake '.#rodolucas'";
     };
 
     functions = {
+      # Rebuild do flake pro host atual (puxa hostname do osConfig)
+      fkr = ''
+        cd ~/RodoNixos
+        if type -q niri-sync
+          niri-sync
+        end
+        sudo nixos-rebuild switch --flake ".#${osConfig.networking.hostName}"
+      '';
+
       # Cria diretório e entra nele
       mkcd = "mkdir -p $argv[1] && cd $argv[1]";
 

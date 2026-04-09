@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, osConfig, ... }:
 
 {
   programs.zsh = {
@@ -23,7 +23,7 @@
       ll = "eza -la --icons";
       lt = "eza --tree --level=2 --icons";
       cat = "bat";
-      fkr = "cd ~/RodoNixos && niri-sync && sudo nixos-rebuild switch --flake '.#rodolucas'";
+      fkr = "cd ~/RodoNixos && (command -v niri-sync >/dev/null && niri-sync || true) && sudo nixos-rebuild switch --flake '.#${osConfig.networking.hostName}'";
     };
 
     plugins = [ ];
