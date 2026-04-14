@@ -13,7 +13,11 @@
     ./programs/niri-sync.nix
   ];
 
-  programs.git.enable = true;
+  programs.git = {
+    enable = true;
+    userName = "laralimamota";
+    userEmail = "llmotadev@gmail.com";
+  };
   programs.home-manager.enable = true;
 
   # direnv + nix-direnv: carrega dev shells automaticamente ao entrar na pasta
