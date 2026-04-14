@@ -3,7 +3,7 @@
 {
   programs.vscode = {
     enable = true;
-    package = pkgs.vscodium;
+    package = pkgs.vscode;
     profiles.default.extensions = with pkgs.vscode-extensions; [
       jnoortheen.nix-ide
       esbenp.prettier-vscode

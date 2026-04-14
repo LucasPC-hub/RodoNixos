@@ -1,6 +1,8 @@
-{ pkgs, ... }:
+{ pkgs }:
 
-let
+{
+  # Wrap a JetBrains IDE so it picks the NVIDIA GPU via PRIME offload
+  # and uses the Wayland Java toolkit.
   withJetbrainsWrapper = pkg: pkgs.symlinkJoin {
     name = "${pkg.pname or pkg.name}-wrapped";
     paths = [ pkg ];
@@ -16,10 +18,4 @@ let
       done
     '';
   };
-in
-{
-  home.packages = [
-    (withJetbrainsWrapper pkgs.jetbrains.webstorm)
-    (withJetbrainsWrapper pkgs.jetbrains.datagrip)
-  ];
 }
