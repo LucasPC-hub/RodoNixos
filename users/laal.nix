@@ -1,5 +1,8 @@
 { pkgs, ... }:
 
+let
+  jetbrains = import ./programs/jetbrains.nix { inherit pkgs; };
+in
 {
   imports = [
     ./shared.nix
@@ -17,6 +20,11 @@
     remmina
     meld
     zapzap
+    dbeaver-bin
+    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
+    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
+    zed-editor
+    collabora-online
   ];
 
   home.sessionVariables = {

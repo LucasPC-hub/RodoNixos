@@ -3,7 +3,7 @@
 let
   homeDir = config.home.homeDirectory;
   niriDir = "${homeDir}/.config/niri";
-  flakeBase = "/home/lucasp/RodoNixos/users/config";
+  flakeBase = "${homeDir}/RodoNixos/users/config";
 
   syncFile = pkgs.writeShellScript "niri-sync-file" ''
     runtime="$1"

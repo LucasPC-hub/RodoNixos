@@ -1,10 +1,11 @@
-{ pkgs, inputs, lib, ... }:
+{ pkgs, inputs, ... }:
 
+let
+  jetbrains = import ./programs/jetbrains.nix { inherit pkgs; };
+in
 {
   imports = [
     ./shared.nix
-    ./programs/niri-sync.nix
-    ./programs/jetbrains.nix
     inputs.dsearch.homeModules.default
   ];
 
@@ -25,6 +26,8 @@
     inputs.t3code.packages.${pkgs.stdenv.hostPlatform.system}.default
     inputs.cmux.packages.${pkgs.stdenv.hostPlatform.system}.default
     jamesdsp
+    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
+    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
   ];
 
   programs.dsearch.enable = true;
@@ -46,11 +49,4 @@
     <dead_acute> <c> : "ç" U00E7
     <dead_acute> <C> : "Ç" U00C7
   '';
-
-  dconf.settings = {
-    "org/gnome/desktop/interface" = {
-      gtk-theme = "adw-gtk3-dark";
-      color-scheme = lib.mkForce "prefer-dark";
-    };
-  };
 }
