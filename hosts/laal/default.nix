@@ -16,6 +16,7 @@
     ../../modules/hardware/bluetooth.nix
     ../../modules/hardware/printing.nix
     ../../modules/hardware/nvidia.nix
+    ../../modules/programs/openfortivpn.nix
   ];
 
   # Overlay do kernel CachyOS (mesmo que rodolucas)
