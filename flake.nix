@@ -113,6 +113,11 @@
         hostPath = ./hosts/laal;
         users = { laal = ./users/laal.nix; };
       };
+
+      rodojaisla = mkHost {
+        hostPath = ./hosts/rodojaisla;
+        users = { jaisla = ./users/jaisla.nix; };
+      };
     };
   };
 }
