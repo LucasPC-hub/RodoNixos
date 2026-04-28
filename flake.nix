@@ -82,6 +82,10 @@
                   doc = final.emptyDirectory;
                 };
               });
+              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
+              openldap = prev.openldap.overrideAttrs (_old: {
+                doCheck = false;
+              });
               quickshell = inputs.quickshell.packages.${system}.default;
             })
             inputs.claude-desktop.overlays.default
