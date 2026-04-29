@@ -52,6 +52,10 @@ binds {
     Mod+Up { focus-window-or-workspace-up; }
     Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
     Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
+    Mod+MouseBack cooldown-ms=150 { focus-column-left; }
+    Mod+MouseForward cooldown-ms=150 { focus-column-right; }
+    Mod+F20 cooldown-ms=150 { focus-workspace-down; }
+    Mod+F21 cooldown-ms=150 { focus-workspace-up; }
     Alt+Print { screenshot-window; }
     Alt+XF86Launch1 { screenshot-window; }
     Mod+BracketLeft { consume-or-expel-window-left; }
