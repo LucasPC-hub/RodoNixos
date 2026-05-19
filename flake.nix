@@ -47,6 +47,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    helium-browser = {
+      url = "github:oxcl/nix-flake-helium-browser";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     t3code = {
       url = "path:./flakes/t3code";
       inputs.nixpkgs.follows = "nixpkgs";

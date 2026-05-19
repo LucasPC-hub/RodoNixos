@@ -7,5 +7,6 @@
 
   networking.extraHosts = ''
     10.1.1.28 DSK-281
+    10.1.1.233 hml.rodojunior.com
   '';
 }

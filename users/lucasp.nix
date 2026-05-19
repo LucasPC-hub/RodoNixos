@@ -7,6 +7,7 @@ in
   imports = [
     ./shared.nix
     inputs.dsearch.homeModules.default
+    inputs.helium-browser.homeModules.default
   ];
 
   home.username = "lucasp";
@@ -15,7 +16,8 @@ in
 
   # Pacotes só meus
   home.packages = with pkgs; [
-  rclone
+
+    rclone
     protonmail-desktop
     proton-pass
     proton-vpn
@@ -33,6 +35,7 @@ in
   ];
 
   programs.dsearch.enable = true;
+  programs.helium.enable = true;
 
   home.sessionVariables = {
     EDITOR = "vim";
