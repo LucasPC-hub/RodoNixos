@@ -34,7 +34,11 @@
     };
 
     claude-desktop = {
-      url = "github:aaddrick/claude-desktop-debian";
+      # Pinned to 1.7196.3 (2026-05-19). Newer commits bump to 1.8089.1,
+      # whose minified bundle breaks the tray-menu patcher in
+      # scripts/patches/tray.sh ("Failed to extract tray menu function
+      # name"). Unpin once upstream fixes the regex for the new bundle.
+      url = "github:aaddrick/claude-desktop-debian/ba2846c8b3e99ac35563e6c2184dd999b19bbc95";
     };
 
     dsearch = {

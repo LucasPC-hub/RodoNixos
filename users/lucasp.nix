@@ -16,7 +16,8 @@ in
 
   # Pacotes só meus
   home.packages = with pkgs; [
-
+    deezer-desktop
+    deezer-enhanced
     rclone
     protonmail-desktop
     proton-pass
