@@ -42,7 +42,9 @@
     };
 
     dsearch = {
-      url = "github:AvengeMedia/danksearch";
+      # Pinned: newer revs ship a stale Go vendorHash upstream (hash mismatch
+      # in dsearch-go-modules). Unpin once upstream fixes their vendorHash.
+      url = "github:AvengeMedia/danksearch/18591ecaa4b87acb222391f9aedd2fbbef9c087f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
