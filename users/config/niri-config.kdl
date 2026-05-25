@@ -12,22 +12,6 @@ config-notification {
     variable-refresh-rate
 }
 
-// Superultrawide (Samsung Odyssey G9, 5120x1440) layout overrides.
-// Mode/scale/position stay managed by DMS (dms/outputs.kdl); niri merges
-// these blocks. Here we only tune how windows are placed on this monitor:
-// center by default, open at 25% width, and cap Mod+R presets at 50%.
-output "DP-1" {
-    layout {
-        center-focused-column "always" // dp1-center-toggle
-        default-column-width { proportion 0.25; }
-        preset-column-widths {
-            proportion 0.25
-            proportion 0.33333
-            proportion 0.5
-        }
-    }
-}
-
 
 gestures {
     hot-corners {

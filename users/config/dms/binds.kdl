@@ -58,7 +58,6 @@ binds {
     Mod+BracketRight { consume-or-expel-window-right; }
     Mod+C { center-column; }
     Mod+Ctrl+C { center-visible-columns; }
-    Mod+Shift+C hotkey-overlay-title="Toggle centralizar DP-1" { spawn "bash" "/home/lucasp/RodoNixos/users/config/scripts/niri-dp1-center-toggle.sh"; }
     Mod+Ctrl+End { move-column-to-last; }
     Mod+Ctrl+F { expand-column-to-available-width; }
     Mod+Ctrl+Home { move-column-to-first; }
