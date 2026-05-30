@@ -40,6 +40,7 @@ in
     calf
     bubblewrap
     wl-clipboard # needed for image paste in Claude Code
+    cifs-utils
   ];
 
   programs.fish.enable = true;

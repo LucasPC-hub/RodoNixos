@@ -13,6 +13,8 @@
     ./programs/niri-sync.nix
   ];
 
+  home.enableNixpkgsReleaseCheck = false;
+
   programs.git.enable = true;
   programs.home-manager.enable = true;
 

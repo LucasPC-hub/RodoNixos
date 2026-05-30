@@ -24,6 +24,22 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
+  fileSystems."/mnt/documentos2" = {
+    device = "//10.1.1.5/documentos2";
+    fsType = "cifs";
+    options = [
+      "guest"
+      "uid=1000"
+      "gid=100"
+      "vers=3.0"
+      "iocharset=utf8"
+      "x-systemd.automount"
+      "noauto"
+      "nofail"
+      "_netdev"
+    ];
+  };
+
   swapDevices =
     [ { device = "/dev/disk/by-uuid/d343065b-7e38-4b53-a8b7-139bd061b526"; }
     ];
