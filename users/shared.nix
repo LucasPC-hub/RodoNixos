@@ -15,6 +15,11 @@
 
   home.enableNixpkgsReleaseCheck = false;
 
+  # Stylix e Home Manager seguem o mesmo nixpkgs (unstable), então o aviso
+  # de versão divergente é benigno. Desativa o check no nível do Home Manager
+  # (o do nível NixOS já está em modules/desktop/stylix.nix).
+  stylix.enableReleaseChecks = false;
+
   programs.git.enable = true;
   programs.home-manager.enable = true;
 
