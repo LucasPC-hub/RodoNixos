@@ -53,6 +53,30 @@
         git commit -m "$commit_msg
 $file_status"
       '';
+
+      # nix-shell ad-hoc mantendo o fish + starship (ex: `nsh trufflehog ripgrep`)
+      # Usa o nix-shell clássico de propósito: ele exporta IN_NIX_SHELL, então o
+      # indicador `nix_shell` do starship acende. `--run fish` evita o bash cru.
+      nsh = ''
+        if test (count $argv) -eq 0
+          echo "uso: nsh <pacote> [pacote...]   (ex: nsh trufflehog)"
+          return 1
+        end
+        nix-shell -p $argv --run fish
+      '';
+
+      # Faz QUALQUER `nix-shell ...` cair no fish em vez do bash cru.
+      # Só interfere em chamadas interativas (scripts c/ shebang `#!.../nix-shell`
+      # e outros programas chamam o binário direto, então não passam por aqui).
+      nix-shell = ''
+        # Se você já passou --run/--command, respeita e não embrulha.
+        if contains -- --run $argv; or contains -- --command $argv
+          command nix-shell $argv
+        else
+          # Caminho absoluto do fish: funciona até com --pure (PATH limpo).
+          command nix-shell $argv --run (status fish-path)
+        end
+      '';
     };
 
     interactiveShellInit = ''
