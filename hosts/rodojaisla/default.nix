@@ -17,6 +17,7 @@
     ../../modules/hardware/printing.nix
     ../../modules/hardware/nvidia.nix
     ../../modules/programs/openfortivpn.nix
+    ../../modules/programs/warsaw.nix
   ];
 
   # Overlay do kernel CachyOS (mesmo que rodolucas)
