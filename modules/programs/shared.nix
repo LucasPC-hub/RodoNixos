@@ -31,6 +31,7 @@ in
         done
       '';
     })
+    firefox-devedition
     discord
     thunar
     adw-gtk3
@@ -40,6 +41,9 @@ in
     calf
     bubblewrap
     wl-clipboard # needed for image paste in Claude Code
+    tcpdump
+    arping
+    nettools
   ];
 
   programs.fish.enable = true;

@@ -14,8 +14,11 @@ in
 
   # Pacotes só da jaisla
   home.packages = with pkgs; [
+    postgresql
+    openssl
     nautilus
     obsidian
+    brave
     pavucontrol
     vlc
     remmina
@@ -38,6 +41,7 @@ in
     jdt-language-server
     collabora-online
     aseprite
+    libreoffice-fresh
   ];
 
   home.pointerCursor = {
@@ -54,7 +58,10 @@ in
     BROWSER = "zen-beta";
     FILES = "nautilus";
     NIXOS_OZONE_WL = "1";
+    GOPATH = "/home/jaisla/development/pessoal/go";
   };
+
+  home.sessionPath = [ "/home/jaisla/development/pessoal/go/bin" ];
     # Cedilha (ç/Ç) com dead_acute + c
     home.file.".XCompose".text = ''
       include "%L"

@@ -51,6 +51,9 @@ in
     gsettings-desktop-schemas
     shared-mime-info
 
+    # Go
+    go
+
     # Rust
     rustup
 
