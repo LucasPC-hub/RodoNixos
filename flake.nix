@@ -93,10 +93,6 @@
                   doc = final.emptyDirectory;
                 };
               });
-              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
-              openldap = prev.openldap.overrideAttrs (_old: {
-                doCheck = false;
-              });
               quickshell = inputs.quickshell.packages.${system}.default;
             })
             inputs.claude-desktop.overlays.default
@@ -138,6 +134,23 @@
         hostPath = ./hosts/rodojaisla;
         users = { jaisla = ./users/jaisla.nix; };
         extraModules = [
+          {
+            # Limita o paralelismo dos builds pra não travar a máquina
+            nix.settings = {
+              max-jobs = 2; # derivations em paralelo
+              cores = 4;    # cores por build (NIX_BUILD_CORES, o make -j)
+            };
+            nix.daemonCPUSchedPolicy = "batch";
+          }
+          {
+            # Swapfile de 10 GB
+            swapDevices = [
+              {
+                device = "/swapfile";
+                size = 10 * 1024; # MB
+              }
+            ];
+          }
           ({ pkgs, ... }: {
             services.postgresql = {
               enable = true;

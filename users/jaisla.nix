@@ -44,6 +44,29 @@ in
     libreoffice-fresh
   ];
 
+  # git.enable vem do shared.nix; aqui fica só a delegação das contas.
+  programs.git = {
+    # Identidade global (trabalho)
+    settings.user = {
+      name = "jaisla-rodojunior";
+      email = "jaisla@rodojunior.com.br";
+    };
+    # Sempre usa SSH pro GitHub, mesmo que o remote esteja como https://
+    settings.url."git@github.com:".insteadOf = "https://github.com/";
+    # Nos projetos pessoais, usa a identidade pessoal
+    includes = [
+      {
+        condition = "gitdir:~/home/jaisla/development/pessoal/";
+        contents = {
+          user = {
+            name = "jaislaataides";
+            email = "jaisslaataidess@gmail.com";
+          };
+        };
+      }
+    ];
+  };
+
   home.pointerCursor = {
     gtk.enable = true;
     package = pkgs.capitaine-cursors;
