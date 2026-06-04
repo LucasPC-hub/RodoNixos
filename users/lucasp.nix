@@ -7,6 +7,7 @@ in
   imports = [
     ./shared.nix
     inputs.dsearch.homeModules.default
+    inputs.helium-browser.homeModules.default
   ];
 
   home.username = "lucasp";
@@ -15,7 +16,9 @@ in
 
   # Pacotes só meus
   home.packages = with pkgs; [
-  rclone
+    deezer-desktop
+    deezer-enhanced
+    rclone
     protonmail-desktop
     proton-pass
     proton-vpn
@@ -23,6 +26,8 @@ in
     zed-editor
     opencode
     ghostty
+    dig
+    qbittorrent
     inputs.t3code.packages.${pkgs.stdenv.hostPlatform.system}.default
     inputs.cmux.packages.${pkgs.stdenv.hostPlatform.system}.default
     jamesdsp
@@ -33,6 +38,7 @@ in
   ];
 
   programs.dsearch.enable = true;
+  programs.helium.enable = true;
 
   home.sessionVariables = {
     EDITOR = "vim";

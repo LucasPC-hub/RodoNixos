@@ -24,7 +24,21 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
-  swapDevices = [ ];
+  fileSystems."/mnt/documentos2" = {
+    device = "//10.1.1.5/documentos2";
+    fsType = "cifs";
+    options = [
+      "guest"
+      "uid=1000"
+      "gid=100"
+      "vers=3.0"
+      "iocharset=utf8"
+      "x-systemd.automount"
+      "noauto"
+      "nofail"
+      "_netdev"
+    ];
+  };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

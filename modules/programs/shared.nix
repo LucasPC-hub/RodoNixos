@@ -41,6 +41,7 @@ in
     calf
     bubblewrap
     wl-clipboard # needed for image paste in Claude Code
+    cifs-utils
     tcpdump
     arping
     nettools

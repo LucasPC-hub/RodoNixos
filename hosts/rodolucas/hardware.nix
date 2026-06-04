@@ -29,6 +29,22 @@
     options = [ "rw" "uid=1000" "gid=100" "nofail" "x-systemd.automount" "remove_hiberfile" ];
   };
 
+  fileSystems."/mnt/documentos2" = {
+    device = "//10.1.1.5/documentos2";
+    fsType = "cifs";
+    options = [
+      "guest"
+      "uid=1000"
+      "gid=100"
+      "vers=3.0"
+      "iocharset=utf8"
+      "x-systemd.automount"
+      "noauto"
+      "nofail"
+      "_netdev"
+    ];
+  };
+
   swapDevices = [{
     device = "/var/lib/swapfile";
     size = 32 * 1024; # 32 GB

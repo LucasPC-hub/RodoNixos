@@ -1,0 +1,50 @@
+http:
+  routers:
+    prd-gateway-web:
+      rule: "Host(`api.prd.gateway.rodojunior.com`)"
+      service: prd-backend
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+        - cors-prd
+    prd-gateway-secure:
+      rule: "Host(`api.prd.gateway.rodojunior.com`)"
+      service: prd-backend
+      entryPoints:
+        - websecure
+      middlewares:
+        - cors-prd
+      tls:
+        certResolver: letsencrypt
+  middlewares:
+    cors-prd:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - HEAD
+          - PUT
+          - PATCH
+          - POST
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - Accept
+          - Origin
+          - X-Requested-With
+          - X-Request-ID
+        accessControlAllowOriginList:
+          - "https://rodojunior.com"
+          - "https://www.rodojunior.com"
+          - "http://localhost:4200"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 3600
+        addVaryHeader: true
+  services:
+    prd-backend:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.1.9:80"
+        passHostHeader: true

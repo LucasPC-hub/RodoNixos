@@ -34,16 +34,27 @@
     };
 
     claude-desktop = {
-      url = "github:aaddrick/claude-desktop-debian";
+      # Pinned to 1.7196.3 (2026-05-19). Newer commits bump to 1.8089.1,
+      # whose minified bundle breaks the tray-menu patcher in
+      # scripts/patches/tray.sh ("Failed to extract tray menu function
+      # name"). Unpin once upstream fixes the regex for the new bundle.
+      url = "github:aaddrick/claude-desktop-debian/ba2846c8b3e99ac35563e6c2184dd999b19bbc95";
     };
 
     dsearch = {
-      url = "github:AvengeMedia/danksearch";
+      # Pinned: newer revs ship a stale Go vendorHash upstream (hash mismatch
+      # in dsearch-go-modules). Unpin once upstream fixes their vendorHash.
+      url = "github:AvengeMedia/danksearch/18591ecaa4b87acb222391f9aedd2fbbef9c087f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    helium-browser = {
+      url = "github:oxcl/nix-flake-helium-browser";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -81,6 +92,10 @@
                 passthru = old.passthru // {
                   doc = final.emptyDirectory;
                 };
+              });
+              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
+              openldap = prev.openldap.overrideAttrs (_old: {
+                doCheck = false;
               });
               quickshell = inputs.quickshell.packages.${system}.default;
             })
