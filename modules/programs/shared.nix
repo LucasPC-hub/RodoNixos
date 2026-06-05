@@ -31,7 +31,7 @@ in
         done
       '';
     })
-    discord
+    vesktop
     thunar
     adw-gtk3
     kdePackages.qt6ct

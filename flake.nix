@@ -38,7 +38,7 @@
     };
 
     dsearch = {
-      url = "github:AvengeMedia/danksearch";
+      url = "github:AvengeMedia/danksearch/18591ecaa4b87acb222391f9aedd2fbbef9c087f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

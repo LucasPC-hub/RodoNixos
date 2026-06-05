@@ -9,6 +9,7 @@
       ll = "eza -la --icons";
       lt = "eza --tree --level=2 --icons";
       cat = "bat";
+      limpa = "docker system prune -a --volumes";
     };
 
     functions = {

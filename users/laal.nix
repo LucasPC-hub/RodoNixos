@@ -24,8 +24,19 @@ in
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
     zed-editor
-    collabora-online
+    libreoffice-qt6-fresh
+    wl-mirror
+    firefox-devedition
+    insomnia
   ];
+
+  home.pointerCursor = {
+    gtk.enable = true;
+    x11.enable = true;
+    package = pkgs.adwaita-icon-theme;
+    name = "Adwaita";
+    size = 24;
+  };
 
   home.sessionVariables = {
     EDITOR = "vim";
