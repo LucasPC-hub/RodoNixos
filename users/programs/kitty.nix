@@ -4,6 +4,15 @@
   programs.kitty = {
     enable = true;
     settings = {
+      # Config: desliga o auto-reload (feature nova do kitty 0.47.0).
+      # É um float em segundos; valor negativo desativa (boss.py: só sobe o
+      # __watch_conf__ se auto_reload_config >= 0). Em NixOS o kitty.conf é
+      # symlink p/ /nix/store; o watcher segue o symlink e vigia o /nix/store
+      # inteiro (~214k inotify watches por janela), estourando
+      # fs.inotify.max_user_watches e quebrando outros watchers
+      # (ex.: dev server do Angular -> ENOSPC).
+      auto_reload_config = "-1";
+
       # Font
       font_size = 12;
       font_features = "none";

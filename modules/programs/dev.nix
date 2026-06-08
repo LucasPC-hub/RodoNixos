@@ -51,6 +51,16 @@ in
     # API client
     bruno
 
+    # Bun global (1.3.14 via overlay no flake.nix — nixpkgs ainda está em 1.3.13)
+    bun
+
+    # Coding agents (CLI)
+    # oh-my-pi (omp) — wrapper bunx: sempre a última versão do npm, sem build.
+    # O core nativo roda via nix-ld.
+    (writeShellScriptBin "omp" ''
+      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
+    '')
+
     # IDEs
     (withNvidiaOffload jetbrains.datagrip)
   ];

@@ -12,6 +12,7 @@
     ../../modules/programs/shared.nix
     ../../modules/programs/dev.nix
     ../../modules/programs/gaming.nix
+    ../../modules/programs/sunshine.nix
     ../../modules/hardware/nvidia.nix
     ../../modules/programs/openfortivpn.nix
     ../../modules/desktop/dms.nix

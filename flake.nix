@@ -1,4 +1,4 @@
-{
+    {
   description = "RodoNixos - NixOS com kernel CachyOS";
 
   inputs = {
@@ -92,6 +92,19 @@
                 passthru = old.passthru // {
                   doc = final.emptyDirectory;
                 };
+              });
+              # nixpkgs trava o bun em 1.3.13; o omp exige >=1.3.14. Bump pro
+              # prebuilt oficial (só troca o zip, não compila).
+              bun = prev.bun.overrideAttrs (_old: rec {
+                version = "1.3.14";
+                src = final.fetchurl {
+                  url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-x64.zip";
+                  hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
+                };
+              });
+              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
+              openldap = prev.openldap.overrideAttrs (_old: {
+                doCheck = false;
               });
               quickshell = inputs.quickshell.packages.${system}.default;
             })

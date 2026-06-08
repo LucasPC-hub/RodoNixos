@@ -24,7 +24,6 @@ in
     proton-vpn
     tidal-hifi
     zed-editor
-    opencode
     ghostty
     dig
     qbittorrent
