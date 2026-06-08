@@ -78,7 +78,7 @@
   let
     system = "x86_64-linux";
 
-    mkHost = { hostPath, users }: nixpkgs.lib.nixosSystem {
+    mkHost = { hostPath, users, extraModules ? [] }: nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = { inherit inputs; };
       modules = [
@@ -112,6 +112,11 @@
           ];
         }
 
+        # Editor de vídeo open source
+        ({ pkgs, ... }: {
+          environment.systemPackages = [ pkgs.kdePackages.kdenlive ];
+        })
+
         inputs.dms.nixosModules.default
         inputs.stylix.nixosModules.stylix
         inputs.home-manager.nixosModules.default
@@ -123,7 +128,7 @@
             users = builtins.mapAttrs (_name: path: import path) users;
           };
         }
-      ];
+      ] ++ extraModules;
     };
   in
   {
@@ -141,6 +146,25 @@
       rodojaisla = mkHost {
         hostPath = ./hosts/rodojaisla;
         users = { jaisla = ./users/jaisla.nix; };
+        extraModules = [
+          ({ pkgs, ... }: {
+            services.postgresql = {
+              enable = true;
+              ensureDatabases = [ "jaisla" ];
+              ensureUsers = [
+                {
+                  name = "jaisla";
+                  ensureDBOwnership = true;
+                }
+              ];
+              authentication = pkgs.lib.mkOverride 10 ''
+                local all all              trust
+                host  all all 127.0.0.1/32 trust
+                host  all all ::1/128      trust
+              '';
+            };
+          })
+        ];
       };
     };
   };

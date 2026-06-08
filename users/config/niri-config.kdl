@@ -285,3 +285,8 @@ include "dms/alttab.kdl"
 include "dms/binds.kdl"
 include "dms/outputs.kdl"
 include "dms/cursor.kdl"
+
+// Custom keybinds that survive DMS regeneration
+binds {
+    Super+Shift+S hotkey-overlay-title="Screenshot (region)" { screenshot; }
+}
