@@ -1,4 +1,4 @@
-{
+    {
   description = "RodoNixos - NixOS com kernel CachyOS";
 
   inputs = {
