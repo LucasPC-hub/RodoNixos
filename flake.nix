@@ -117,6 +117,21 @@
           environment.systemPackages = [ pkgs.kdePackages.kdenlive ];
         })
 
+        # Portais p/ screencast (PipeWire) e file pickers em apps Wayland/GTK
+        ({ pkgs, ... }: {
+          xdg.portal = {
+            enable = true;
+            extraPortals = with pkgs; [
+              xdg-desktop-portal-gnome
+              xdg-desktop-portal-gtk
+            ];
+            config = {
+              niri.default = [ "gnome" "gtk" ];
+              common.default = [ "gnome" "gtk" ];
+            };
+          };
+        })
+
         inputs.dms.nixosModules.default
         inputs.stylix.nixosModules.stylix
         inputs.home-manager.nixosModules.default
