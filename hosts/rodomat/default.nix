@@ -39,7 +39,14 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "input" "docker" ];
     shell = pkgs.fish;
+    openssh.authorizedKeys.keys = [
+      # chave pessoal do matt (id_ed25519) — login no rodomat
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIChA1ZNJt0AT2iF4sC0ujhhDbWAXSUugNYtX0MdiOBT3 matt"
+    ];
   };
+
+  # Tailscale (daemon). Autenticar 1x: `sudo tailscale up` (login matheus.dias.dev).
+  services.tailscale.enable = true;
 
   # Notebook: bateria e energia
   services.upower.enable = true;
