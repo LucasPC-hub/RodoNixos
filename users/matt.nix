@@ -18,6 +18,39 @@ in
     email = "matheus.dias.dev@gmai.com";
   };
 
+  # Aliases SSH (espelha o ~/.ssh/config do Arch). As chaves privadas
+  # referenciadas são copiadas à mão — não entram no repo.
+  programs.ssh = {
+    enable = true;
+    addKeysToAgent = "yes";
+    matchBlocks = {
+      pve-cerebro = {
+        hostname = "100.89.12.37";
+        user = "root";
+        identityFile = "~/.ssh/cerebro_pve";
+        identitiesOnly = true;
+      };
+      dokploy = {
+        hostname = "192.168.2.150";
+        user = "root";
+        identityFile = "~/.ssh/id_ed25519";
+        identitiesOnly = true;
+      };
+      dues-remote = {
+        hostname = "192.168.2.102";
+        user = "root";
+        identityFile = "~/.ssh/dues_remote";
+        identitiesOnly = true;
+      };
+      ai = {
+        hostname = "192.168.2.160";
+        user = "root";
+        identityFile = "~/.ssh/ai_dokploy";
+        identitiesOnly = true;
+      };
+    };
+  };
+
   # Pacotes só do matt — apps/CLIs trazidos do Arch.
   # Deduplicados do que já vem de shared.nix e users/programs/* (kitty, fish,
   # starship, yazi, vscode, bat, eza, fastfetch...) e de modules/programs/*
