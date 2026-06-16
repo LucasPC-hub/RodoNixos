@@ -198,6 +198,11 @@
           })
         ];
       };
+
+      rodomat = mkHost {
+        hostPath = ./hosts/rodomat;
+        users = { matt = ./users/matt.nix; };
+      };
     };
   };
 }
