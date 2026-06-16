@@ -15,7 +15,7 @@ in
   # git.enable vem do shared.nix; aqui fica só a identidade do matt.
   programs.git.settings.user = {
     name = "matheuscara";
-    email = "matheus.dias.dev@gmai.com";
+    email = "matheus.dias.dev@gmail.com";
   };
 
   # Aliases SSH (espelha o ~/.ssh/config do Arch). As chaves privadas

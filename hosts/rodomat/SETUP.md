@@ -66,7 +66,6 @@ da máquina antiga com sudo — caso contrário entra como nó novo, que é o no
 
 ## Pendências / notas
 
-- **Email com typo**: `users/matt.nix` está `matheus.dias.dev@gmai.com` (`gmai`, não `gmail`). Conferir/corrigir.
 - **`ccstatusline`** não existe no nixpkgs (é npm). Se quiser, embrulhar com `bunx` igual o `omp` em `modules/programs/dev.nix`.
 - **`tailscale`** ficou como serviço (daemon), não como pacote em `home.packages` — é o jeito certo.
 - **IPs internos no repo**: os `matchBlocks` commitaram `192.168.2.x` / `100.89.12.37` / `user=root` no fork público. Não é credencial, mas expõe inventário. Se incomodar, mover os `hostname` pra fora do repo.
