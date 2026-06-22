@@ -23,9 +23,8 @@
     };
 
     dms = {
-      url = "github:AvengeMedia/DankMaterialShell/stable";
+      url = "github:AvengeMedia/DankMaterialShell/master";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.quickshell.follows = "quickshell";
     };
 
     claude-code = {
@@ -70,6 +69,12 @@
 
     stylix = {
       url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Gerenciamento de segredos cifrados versionados no repo (age).
+    agenix = {
+      url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -119,6 +124,7 @@
 
         inputs.dms.nixosModules.default
         inputs.stylix.nixosModules.stylix
+        inputs.agenix.nixosModules.default
         inputs.home-manager.nixosModules.default
         {
           home-manager = {

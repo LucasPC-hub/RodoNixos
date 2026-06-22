@@ -33,6 +33,8 @@ in
     jamesdsp
     remmina
     freerdp
+    awscli2
+    oci-cli
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
   ];
@@ -42,6 +44,11 @@ in
 
   home.sessionVariables = {
     EDITOR = "vim";
+    AWS_DEFAULT_REGION = "us-east-1";
+    AWS_REGION = "us-east-1";
+    # agenix expõe os arquivos via symlink (lrwxrwxrwx); o oci-cli reclama da
+    # permissão do link. Os alvos reais são 600, então é seguro silenciar.
+    OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING = "True";
     QT_QPA_PLATFORMTHEME = "gtk3";
     TERMINAL = "kitty";
     BROWSER = "zen-beta";

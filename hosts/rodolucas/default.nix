@@ -41,6 +41,32 @@
 
   networking.hostName = "rodolucas";
 
+  # Segredos cifrados (agenix). Descriptografados no boot com a chave SSH do
+  # host e colocados direto onde os CLIs procuram, com dono lucasp.
+  age.secrets = {
+    aws-credentials = {
+      file = ../../secrets/aws-credentials.age;
+      path = "/home/lucasp/.aws/credentials";
+      owner = "lucasp";
+      group = "users";
+      mode = "600";
+    };
+    oci-config = {
+      file = ../../secrets/oci-config.age;
+      path = "/home/lucasp/.oci/config";
+      owner = "lucasp";
+      group = "users";
+      mode = "600";
+    };
+    oci-api-key = {
+      file = ../../secrets/oci-api-key.age;
+      path = "/home/lucasp/.oci/oci_api_key.pem";
+      owner = "lucasp";
+      group = "users";
+      mode = "600";
+    };
+  };
+
   # Bateria e energia
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
