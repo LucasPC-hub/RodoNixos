@@ -2,6 +2,37 @@
 
 let
   jetbrains = import ./programs/jetbrains.nix { inherit pkgs; };
+
+  # Decifra o .env cifrado de um projeto (secrets/<proj>-env.age no RodoNixos)
+  # pra ./.env na pasta atual. Funciona em qualquer worktree/máquina que tenha
+  # a chave age pessoal. Uso: rodoenv vitrum  [destino]
+  rodoenv = pkgs.writeShellApplication {
+    name = "rodoenv";
+    runtimeInputs = [ pkgs.age ];
+    text = ''
+      # rodoenv [--if-missing] <projeto> [destino]
+      # --if-missing: não faz nada se o destino já existe (uso em shellHook/direnv).
+      if_missing=0
+      if [ "''${1:-}" = "--if-missing" ]; then if_missing=1; shift; fi
+      proj="''${1:-}"
+      dest="''${2:-.env}"
+      repo="''${RODONIXOS:-$HOME/RodoNixos}"
+      key="''${AGE_KEY:-$HOME/.config/sops/age/keys.txt}"
+      agefile="$repo/secrets/$proj-env.age"
+
+      if [ -z "$proj" ]; then
+        echo "uso: rodoenv [--if-missing] <projeto> [destino]   (ex: rodoenv vitrum)"; exit 1
+      fi
+      if [ ! -f "$agefile" ]; then echo "não existe: $agefile"; exit 1; fi
+      if [ ! -f "$key" ]; then echo "sem chave age em: $key"; exit 1; fi
+      if [ "$if_missing" = "1" ] && [ -e "$dest" ]; then exit 0; fi
+      if [ -e "$dest" ]; then cp -f "$dest" "$dest.bak"; echo "backup do antigo -> $dest.bak"; fi
+
+      age -d -i "$key" -o "$dest" "$agefile"
+      chmod 600 "$dest"
+      echo "ok: $proj -> $dest"
+    '';
+  };
 in
 {
   imports = [
@@ -35,6 +66,8 @@ in
     freerdp
     awscli2
     oci-cli
+    tmux
+    rodoenv
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
   ];

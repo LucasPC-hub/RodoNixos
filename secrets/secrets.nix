@@ -34,4 +34,9 @@ in
   "aws-credentials.age".publicKeys = [ admin rodolucas /* rodomat */ ];
   "oci-config.age".publicKeys = [ admin rodolucas /* rodomat */ ];
   "oci-api-key.age".publicKeys = [ admin rodolucas /* rodomat */ ];
+
+  # .env de projetos de dev. Não são entregues pelo módulo NixOS; o comando
+  # `rodoenv <projeto>` decifra com a chave age do usuário pra ./.env (qualquer
+  # worktree/máquina). Por isso o recipient principal é a chave admin.
+  "vitrum-env.age".publicKeys = [ admin rodolucas ];
 }
