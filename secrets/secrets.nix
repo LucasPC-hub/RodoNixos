@@ -27,8 +27,10 @@ let
   allHosts = [ rodolucas /* rodomat */ ];
 in
 {
-  # Segredos compartilhados (ex: credenciais de banco) — todos os hosts.
-  "database.age".publicKeys = [ admin ] ++ allHosts;
+  # Conexões de banco (lista JSON com senhas). Não é entregue pelo módulo NixOS;
+  # o comando `db-export` decifra e gera as URLs JDBC pra importar no
+  # DataGrip/DBeaver. Recipient principal é a chave admin (+ colegas depois).
+  "databases.age".publicKeys = [ admin ] ++ allHosts;
 
   # Credenciais de nuvem — por enquanto só rodolucas (+ rodomat quando subir).
   "aws-credentials.age".publicKeys = [ admin rodolucas /* rodomat */ ];
@@ -39,4 +41,8 @@ in
   # `rodoenv <projeto>` decifra com a chave age do usuário pra ./.env (qualquer
   # worktree/máquina). Por isso o recipient principal é a chave admin.
   "vitrum-env.age".publicKeys = [ admin rodolucas ];
+
+  # Credenciais SMB do NAS (formato credentials= do mount.cifs). Lido pelo
+  # root no boot pra montar o //10.1.1.251/Volume_1 — precisa da chave do host.
+  "nas-smb-creds.age".publicKeys = [ admin rodolucas ];
 }

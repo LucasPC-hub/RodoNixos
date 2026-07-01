@@ -44,5 +44,21 @@
   # WAYLAND_DISPLAY NÃO está no ambiente — daí o UnsetEnvironment.
   systemd.user.services.sunshine.serviceConfig.UnsetEnvironment = "WAYLAND_DISPLAY";
 
-  environment.systemPackages = with pkgs; [ moonlight-qt ];
+  # Re-associação por mudança de regdom também derruba o stream: o iwlwifi sobe
+  # num domínio regulatório restrito e, ao ver o country code BR no beacon do AP,
+  # TROCA o regdom em runtime → recalcula canais (habilita 6GHz) → re-associa.
+  # Esse religamento de ~1s mata o Moonlight (visto como burst de "sendmsg 101").
+  # Fixando BR no boot não há "mudança" pra reagir — sem re-associação periódica.
+  boot.extraModprobeConfig = ''
+    options cfg80211 ieee80211_regdom=BR
+  '';
+
+  # Wi-Fi power save MATA o stream: com sinal excelente e sem deauth, o rádio
+  # iwlwifi "cochila" entre pacotes e gera picos de latência/perda que derrubam
+  # o UDP do Moonlight (e até sessões SSH ociosas). O parâmetro do módulo já vem
+  # power_save=N, mas o NetworkManager religa em runtime (wifi.powersave=default).
+  # Desliga de vez — este host é o servidor de streaming, latência > bateria.
+  networking.networkmanager.wifi.powersave = false;
+
+  environment.systemPackages = with pkgs; [ iw moonlight-qt ];
 }

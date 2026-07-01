@@ -36,7 +36,14 @@
   };
 
   # Kernel params específicos desta máquina
-  boot.kernelParams = [ "video=eDP-1:2880x1800@120" ];
+  # i915.enable_psr=0 / enable_dc=0: workaround p/ bug do Meteor Lake em que o
+  # PHY do eDP não recupera o refclk no resume ("PHY A failed to request refclk")
+  # e o painel não acende às vezes ao abrir a tampa.
+  boot.kernelParams = [
+    "video=eDP-1:2880x1800@120"
+    "i915.enable_psr=0"
+    "i915.enable_dc=0"
+  ];
   boot.kernelModules = [ "i2c-dev" ];
 
   networking.hostName = "rodolucas";
@@ -65,6 +72,32 @@
       group = "users";
       mode = "600";
     };
+    # Credenciais SMB do NAS (lidas pelo root no boot pra montar via CIFS).
+    nas-smb-creds.file = ../../secrets/nas-smb-creds.age;
+  };
+
+  # NAS D-Link DNS-320L (escritório) via CIFS/SMB1. Login vem do agenix.
+  # automount + nofail: só monta no primeiro acesso e não trava o boot quando
+  # você está fora da LAN do escritório (NAS inalcançável).
+  environment.systemPackages = [ pkgs.cifs-utils ];
+  fileSystems."/mnt/nas-vol1" = {
+    device = "//10.1.1.251/Volume_1";
+    fsType = "cifs";
+    options = [
+      "credentials=/run/agenix/nas-smb-creds"
+      "vers=1.0"
+      "sec=ntlmssp"
+      "uid=1000"
+      "gid=100"
+      "iocharset=utf8"
+      "file_mode=0664"
+      "dir_mode=0775"
+      "nofail"
+      "_netdev"
+      "x-systemd.automount"
+      "x-systemd.idle-timeout=600"
+      "x-systemd.mount-timeout=15"
+    ];
   };
 
   # Bateria e energia
