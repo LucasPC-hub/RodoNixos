@@ -22,16 +22,8 @@ let
   # ── Chaves de host (SSH ed25519 de /etc/ssh/ssh_host_ed25519_key.pub) ──────
   rodolucas = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEk2OrBwxZjSL+u3CG/mOyDOzSoO/xyEMgv+22AvPe08 root@nixos";
   # rodomat = "ssh-ed25519 ...";  # preencher quando o host subir; depois rodar --rekey
-
-  # ── Grupos de recipients ───────────────────────────────────────────────────
-  allHosts = [ rodolucas /* rodomat */ ];
 in
 {
-  # Conexões de banco (lista JSON com senhas). Não é entregue pelo módulo NixOS;
-  # o comando `db-export` decifra e gera as URLs JDBC pra importar no
-  # DataGrip/DBeaver. Recipient principal é a chave admin (+ colegas depois).
-  "databases.age".publicKeys = [ admin ] ++ allHosts;
-
   # Credenciais de nuvem — por enquanto só rodolucas (+ rodomat quando subir).
   "aws-credentials.age".publicKeys = [ admin rodolucas /* rodomat */ ];
   "oci-config.age".publicKeys = [ admin rodolucas /* rodomat */ ];

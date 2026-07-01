@@ -17,7 +17,7 @@ let
       proj="''${1:-}"
       dest="''${2:-.env}"
       repo="''${RODONIXOS:-$HOME/RodoNixos}"
-      key="''${AGE_KEY:-$HOME/.config/sops/age/keys.txt}"
+      key="''${AGE_KEY:-$HOME/.config/receita-de-bolo.md}"
       agefile="$repo/secrets/$proj-env.age"
 
       if [ -z "$proj" ]; then
@@ -31,36 +31,6 @@ let
       age -d -i "$key" -o "$dest" "$agefile"
       chmod 600 "$dest"
       echo "ok: $proj -> $dest"
-    '';
-  };
-
-  # Gera URLs JDBC (com credencial) a partir do cofre secrets/databases.age.
-  # A pessoa importa colando a URL no DataGrip ou DBeaver. Uso: db-export [saida]
-  db-export = pkgs.writeShellApplication {
-    name = "db-export";
-    runtimeInputs = [ pkgs.age pkgs.jq ];
-    text = ''
-      repo="''${RODONIXOS:-$HOME/RodoNixos}"
-      key="''${AGE_KEY:-$HOME/.config/sops/age/keys.txt}"
-      agefile="$repo/secrets/databases.age"
-      out="''${1:-conexoes-jdbc.txt}"
-
-      [ -f "$agefile" ] || { echo "não existe: $agefile (rode setup-databases.sh)"; exit 1; }
-      [ -f "$key" ] || { echo "sem chave age em: $key"; exit 1; }
-
-      age -d -i "$key" "$agefile" | jq -r '
-        .[]
-        | .u = (.user|@uri) | .p = (.password|@uri)
-        | "[\(.name)]  (\(.type) @ \(.host):\(.port)/\(.db))",
-          ( if .type=="postgresql" then "jdbc:postgresql://\(.host):\(.port)/\(.db)?user=\(.u)&password=\(.p)"
-            elif (.type=="mysql" or .type=="mariadb") then "jdbc:\(.type)://\(.host):\(.port)/\(.db)?user=\(.u)&password=\(.p)"
-            elif .type=="sqlserver" then "jdbc:sqlserver://\(.host):\(.port);databaseName=\(.db);user=\(.u);password=\(.p)"
-            elif .type=="oracle" then "jdbc:oracle:thin:\(.u)/\(.p)@\(.host):\(.port)/\(.db)"
-            else "jdbc:\(.type)://\(.host):\(.port)/\(.db)?user=\(.u)&password=\(.p)" end ),
-          ""
-      ' > "$out"
-      chmod 600 "$out"
-      echo "ok -> $out (contém senhas; não commitar). Importe colando cada URL."
     '';
   };
 in
@@ -98,7 +68,6 @@ in
     oci-cli
     tmux
     rodoenv
-    db-export
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
   ];

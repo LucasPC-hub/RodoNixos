@@ -18,6 +18,10 @@
           niri-sync
         end
         sudo nixos-rebuild switch --flake ".#${osConfig.networking.hostName}"
+        # Backup do perfil do Zen em background (auto-pula se o Zen estiver aberto).
+        if type -q zen-backup
+          zen-backup &
+        end
       '';
 
       # Cria diretório e entra nele

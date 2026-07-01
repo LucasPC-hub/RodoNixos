@@ -11,6 +11,7 @@
     ./programs/yazi.nix
     ./programs/dms-config.nix
     ./programs/niri-sync.nix
+    ./programs/zen.nix
   ];
 
   home.enableNixpkgsReleaseCheck = false;
