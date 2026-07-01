@@ -6,8 +6,9 @@ Segredos cifrados com [agenix](https://github.com/ryantm/agenix). Os arquivos
 
 ## Chaves
 
-- **Admin (pessoal):** `~/.config/sops/age/keys.txt` na máquina do Lucas.
-  ⚠️ Faça backup — sem ela você não consegue editar/re-cifrar segredos.
+- **Admin (pessoal):** `~/.config/receita-de-bolo.md` na máquina do Lucas
+  (override com `$AGE_KEY`). Nome propositalmente discreto, mas é só cosmético —
+  o real é cifrar o disco. ⚠️ Faça backup — sem ela não dá pra editar/re-cifrar.
   Pública: `age1fhrctt9...qanu`.
 - **Hosts:** cada host descriptografa no boot com `/etc/ssh/ssh_host_ed25519_key`.
   A pública correspondente fica em `secrets.nix`.
@@ -18,7 +19,7 @@ Segredos cifrados com [agenix](https://github.com/ryantm/agenix). Os arquivos
 cd ~/RodoNixos
 RULES=./secrets/secrets.nix \
   nix run github:ryantm/agenix -- -e secrets/aws-credentials.age \
-  -i ~/.config/sops/age/keys.txt
+  -i ~/.config/receita-de-bolo.md
 ```
 
 (Os helpers `scripts/setup-cloud-secrets.sh` e `scripts/fix-cloud-secrets.sh`
@@ -34,7 +35,7 @@ também criam/recifram AWS e OCI sem editor.)
    ```bash
    cd ~/RodoNixos
    RULES=./secrets/secrets.nix \
-     nix run github:ryantm/agenix -- --rekey -i ~/.config/sops/age/keys.txt
+     nix run github:ryantm/agenix -- --rekey -i ~/.config/receita-de-bolo.md
    ```
 5. No `default.nix` do host, declare os `age.secrets.*` (veja
    `hosts/rodolucas/default.nix` como exemplo).
@@ -42,12 +43,23 @@ também criam/recifram AWS e OCI sem editor.)
 
 ## Onde cada segredo é entregue (rodolucas)
 
-| Segredo                | Caminho no boot              | CLI       |
-|------------------------|------------------------------|-----------|
-| `aws-credentials.age`  | `~/.aws/credentials`         | `aws`     |
-| `oci-config.age`       | `~/.oci/config`              | `oci`     |
-| `oci-api-key.age`      | `~/.oci/oci_api_key.pem`     | `oci`     |
-| `database.age`         | (ainda não declarado)        | —         |
+| Segredo                | Caminho no boot              | Para        |
+|------------------------|------------------------------|-------------|
+| `aws-credentials.age`  | `~/.aws/credentials`         | `aws`       |
+| `oci-config.age`       | `~/.oci/config`              | `oci`       |
+| `oci-api-key.age`      | `~/.oci/oci_api_key.pem`     | `oci`       |
+| `nas-smb-creds.age`    | `/run/agenix/nas-smb-creds`  | mount CIFS do NAS |
 
 Região AWS e supressão de warning da OCI ficam em `users/lucasp.nix`
 (`home.sessionVariables`), pois não são segredos.
+
+## Segredos NÃO entregues pelo módulo (decifrados sob demanda)
+
+Estes não viram arquivo no boot; um comando decifra com a chave admin quando preciso:
+
+| Segredo           | Comando        | O quê |
+|-------------------|----------------|-------|
+| `vitrum-env.age`  | `rodoenv vitrum` | `.env` do projeto na pasta atual |
+
+(Backup do perfil do Zen: `zen-backup`/`zen-restore` — cifra `~/.zen` num bucket
+OCI. Ver `users/programs/zen.nix`.)
