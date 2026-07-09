@@ -53,13 +53,5 @@ também criam/recifram AWS e OCI sem editor.)
 Região AWS e supressão de warning da OCI ficam em `users/lucasp.nix`
 (`home.sessionVariables`), pois não são segredos.
 
-## Segredos NÃO entregues pelo módulo (decifrados sob demanda)
-
-Estes não viram arquivo no boot; um comando decifra com a chave admin quando preciso:
-
-| Segredo           | Comando        | O quê |
-|-------------------|----------------|-------|
-| `vitrum-env.age`  | `rodoenv vitrum` | `.env` do projeto na pasta atual |
-
 (Backup do perfil do Zen: `zen-backup`/`zen-restore` — cifra `~/.zen` num bucket
 OCI. Ver `users/programs/zen.nix`.)
