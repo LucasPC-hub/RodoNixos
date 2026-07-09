@@ -23,6 +23,7 @@
     ../../modules/hardware/logitech.nix
     ../../modules/hardware/printing.nix
     ../../modules/hardware/samsung-speaker-fix.nix
+    ../../modules/hardware/samsung-webcam-fix.nix
   ];
 
   # Overlay do kernel CachyOS
@@ -43,6 +44,11 @@
     "video=eDP-1:2880x1800@120"
     "i915.enable_psr=0"
     "i915.enable_dc=0"
+    # enable_dpcd_backlight=3: painel AMOLED da Samsung (SDC) controla brilho via
+    # DPCD/AUX com a interface HDR proprietária da Intel, não PWM. O VBT declara
+    # PWM errado, então "auto" (-1) e "1" não resolvem — 3 força a interface Intel.
+    # Se não resolver, testar 2 (força interface VESA padrão).
+    "i915.enable_dpcd_backlight=3"
   ];
   boot.kernelModules = [ "i2c-dev" ];
 
