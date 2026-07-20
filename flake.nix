@@ -139,6 +139,13 @@
   in
   {
     nixosConfigurations = {
+      # Host BASE — template do padrão da empresa. Copie hosts/base + use
+      # users/rodouser.nix pra provisionar máquinas novas.
+      base = mkHost {
+        hostPath = ./hosts/base;
+        users = { rodouser = ./users/rodouser.nix; };
+      };
+
       rodolucas = mkHost {
         hostPath = ./hosts/rodolucas;
         users = { lucasp = ./users/lucasp.nix; };
