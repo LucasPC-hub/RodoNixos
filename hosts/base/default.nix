@@ -16,6 +16,8 @@
 {
   imports = [
     ./hardware.nix
+    inputs.disko.nixosModules.default  # opção disko.devices (escopada a este host)
+    ./disko.nix                        # layout de disco declarativo
 
     ../../modules/core/boot.nix
     ../../modules/core/nix.nix
@@ -60,6 +62,9 @@
   #     mode = "600";
   #   };
   # };
+
+  # Swap por zram (o disko não cria partição de swap)
+  zramSwap.enable = true;
 
   # Bateria e energia
   services.upower.enable = true;

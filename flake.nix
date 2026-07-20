@@ -77,6 +77,12 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Particionamento declarativo (usado só pelo host base + rodo-install).
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { nixpkgs, ... }@inputs:
@@ -139,12 +145,25 @@
   in
   {
     nixosConfigurations = {
+      # ISO instaladora auto-provisionadora. Build:
+      #   nix build .#nixosConfigurations.rodo-installer.config.system.build.isoImage
+      rodo-installer = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; self = inputs.self; };
+        modules = [
+          ./modules/install/installer.nix
+          ./modules/install/rodo-install.nix
+        ];
+      };
+
       # Host BASE — template do padrão da empresa. Copie hosts/base + use
       # users/rodouser.nix pra provisionar máquinas novas.
       base = mkHost {
         hostPath = ./hosts/base;
         users = { rodouser = ./users/rodouser.nix; };
       };
+
+      # >>> RODO-INSTALL-HOSTS (não remova: âncora do rodo-install) <<<
 
       rodolucas = mkHost {
         hostPath = ./hosts/rodolucas;
