@@ -27,6 +27,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Greeter: o upstream tirou o greeter do DankMaterialShell e moveu pra
+    # este repo separado. `programs.dms-greeter` (dank-greeter) substitui o
+    # antigo `services.displayManager.dms-greeter` do dms.
+    dank-greeter = {
+      url = "github:AvengeMedia/dank-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     claude-code = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -129,6 +137,7 @@
         })
 
         inputs.dms.nixosModules.default
+        inputs.dank-greeter.nixosModules.default
         inputs.stylix.nixosModules.stylix
         inputs.agenix.nixosModules.default
         inputs.home-manager.nixosModules.default
