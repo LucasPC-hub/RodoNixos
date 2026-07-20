@@ -74,21 +74,20 @@ let
       # registra no flake.nix (âncora determinística)
       sed -i "/# >>> RODO-INSTALL-HOSTS/a\\      $HOST = mkHost { hostPath = ./hosts/$HOST; users = { $USERNAME = ./users/$USERNAME.nix; }; };" flake.nix
 
-      # o nix (repo git) só enxerga arquivos rastreados; staged basta
-      git -C "$WORK" add -A
+      # NB: $WORK é um diretório simples (o ${self} da ISO não tem .git). Flake
+      # em path sem git => o nix já enxerga TODOS os arquivos, sem precisar de
+      # `git add`. Por isso não há nenhum comando git aqui.
 
       echo ">> particionando + formatando $DISK (disko)..."
-      disko --mode disko "hosts/$HOST/disko.nix"
+      disko --mode disko --flake ".#$HOST"
 
       echo ">> detectando hardware da máquina..."
       nixos-generate-config --no-filesystems --root /mnt --dir /tmp/hwgen
       cp /tmp/hwgen/hardware-configuration.nix "hosts/$HOST/hardware.nix"
-      git -C "$WORK" add -A
 
       echo ">> copiando config para /mnt/etc/nixos..."
       mkdir -p /mnt/etc/nixos
       cp -rT "$WORK" /mnt/etc/nixos
-      git -C /mnt/etc/nixos add -A 2>/dev/null || true
 
       echo ">> instalando (.#$HOST)... isso baixa pacotes do cache, pode demorar."
       nixos-install --flake "/mnt/etc/nixos#$HOST" --no-channel-copy
