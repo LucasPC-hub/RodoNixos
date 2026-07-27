@@ -21,6 +21,7 @@
     ../../modules/hardware/bluetooth.nix
     ../../modules/hardware/droidcam.nix
     ../../modules/hardware/logitech.nix
+    ../../modules/hardware/lofree-flow2.nix
     ../../modules/hardware/printing.nix
     ../../modules/hardware/samsung-speaker-fix.nix
     ../../modules/hardware/samsung-webcam-fix.nix

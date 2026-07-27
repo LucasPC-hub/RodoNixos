@@ -144,6 +144,20 @@ layout {
     struts {
     }
 }
+// Override de layout só para o monitor externo (DP-1, Samsung G9 ultrawide).
+// Merge com o bloco output gerado pelo DMS em dms/outputs.kdl (mode/scale/position
+// são herdados). Abre janelas em 25%, sempre centralizadas, e limita os presets a
+// 25%/50% (Mod+R alterna entre eles) pra manter o layout 25|50|25.
+output "DP-1" {
+    layout {
+        center-focused-column "always"
+        default-column-width { proportion 0.25; }
+        preset-column-widths {
+            proportion 0.25
+            proportion 0.5
+        }
+    }
+}
 layer-rule {
     match namespace="^quickshell$"
     place-within-backdrop true

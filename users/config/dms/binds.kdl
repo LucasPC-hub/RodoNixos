@@ -5,6 +5,7 @@ binds {
     Mod+D hotkey-overlay-title="Application Launcher" { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
     Mod+M hotkey-overlay-title="Task Manager" { spawn "dms" "ipc" "call" "processlist" "toggle"; }
     Mod+N hotkey-overlay-title="Notification Center" { spawn "dms" "ipc" "call" "notifications" "toggle"; }
+    Mod+S { spawn "dms" "ipc" "call" "spotlight-bar" "toggle"; }
     Mod+Shift+N hotkey-overlay-title="Notepad" { spawn "dms" "ipc" "call" "notepad" "toggle"; }
     Mod+V hotkey-overlay-title="Clipboard Manager" { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
     Mod+Y hotkey-overlay-title="Browse Wallpapers" { spawn "dms" "ipc" "call" "dankdash" "wallpaper"; }
@@ -92,8 +93,8 @@ binds {
     Mod+Shift+P { power-off-monitors; }
     Ctrl+Print { screenshot-screen; }
     Ctrl+XF86Launch1 { screenshot-screen; }
+    Mod+P { screenshot; }
     Print { screenshot; }
-    XF86Launch1 { screenshot; }
     Mod+Shift+E { quit; }
     Mod+B hotkey-overlay-title="Open Browser" { spawn "sh" "-c" "$BROWSER"; }
     Mod+E hotkey-overlay-title="Open File Manager" { spawn "sh" "-c" "$FILES"; }
