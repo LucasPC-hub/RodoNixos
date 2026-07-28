@@ -121,11 +121,17 @@
                   hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
                 };
               });
-              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
-              openldap = prev.openldap.overrideAttrs (_old: {
-                doCheck = false;
-              });
               quickshell = inputs.quickshell.packages.${system}.default;
+              # nixpkgs bumpou libdisplay-info pra 0.4.0, mas o niri 26.04
+              # ainda usa a crate libdisplay-info-sys 0.3.0 (exige < 0.4.0).
+              # Aponta o niri pro libdisplay-info_0_2 (0.2.0), que satisfaz.
+              niri = prev.niri.overrideAttrs (old: {
+                buildInputs = map
+                  (p: if (p.pname or "") == "libdisplay-info"
+                      then final.libdisplay-info_0_2
+                      else p)
+                  old.buildInputs;
+              });
             })
             inputs.claude-desktop.overlays.default
           ];
