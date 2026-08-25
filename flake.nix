@@ -83,6 +83,16 @@
                 };
               });
               quickshell = inputs.quickshell.packages.${system}.default;
+
+              # Bun 1.3.14 — nixpkgs ainda está em 1.3.13, e o omp (oh-my-pi)
+              # exige >= 1.3.14. Só sobe a versão do binário, sem mexer no resto.
+              bun = prev.bun.overrideAttrs (_old: rec {
+                version = "1.3.14";
+                src = prev.fetchurl {
+                  url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-x64.zip";
+                  hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
+                };
+              });
             })
             inputs.claude-desktop.overlays.default
           ];

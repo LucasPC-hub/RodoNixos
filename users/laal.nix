@@ -28,6 +28,12 @@ in
     wl-mirror
     firefox-devedition
     insomnia
+
+    # oh-my-pi (omp) — wrapper bunx: sempre a última versão do npm, sem build.
+    # Core nativo roda via nix-ld (habilitado em modules/programs/dev.nix).
+    (writeShellScriptBin "omp" ''
+      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
+    '')
   ];
 
   home.pointerCursor = {

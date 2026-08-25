@@ -95,6 +95,9 @@
       # Interrupt
       "ctrl+d" = "send_text all \\x03";
 
+      # Delete previous word (send Ctrl+W = 0x17) so ctrl+backspace works in TUIs like omp
+      "ctrl+backspace" = "send_text all \\x17";
+
       # Font size
       "ctrl+plus" = "change_font_size all +1.0";
       "ctrl+minus" = "change_font_size all -1.0";

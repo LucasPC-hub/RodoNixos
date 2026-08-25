@@ -37,6 +37,9 @@
     shell = pkgs.fish;
   };
 
+  # VPN mesh
+  services.tailscale.enable = true;
+
   # Notebook: bateria e energia
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
