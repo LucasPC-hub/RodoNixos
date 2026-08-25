@@ -23,9 +23,16 @@
     };
 
     dms = {
-      url = "github:AvengeMedia/DankMaterialShell/stable";
+      url = "github:AvengeMedia/DankMaterialShell/master";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.quickshell.follows = "quickshell";
+    };
+
+    # Greeter: o upstream tirou o greeter do DankMaterialShell e moveu pra
+    # este repo separado. `programs.dms-greeter` (dank-greeter) substitui o
+    # antigo `services.displayManager.dms-greeter` do dms.
+    dank-greeter = {
+      url = "github:AvengeMedia/dank-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     claude-code = {
@@ -34,16 +41,27 @@
     };
 
     claude-desktop = {
-      url = "github:aaddrick/claude-desktop-debian";
+      # Pinned to 1.7196.3 (2026-05-19). Newer commits bump to 1.8089.1,
+      # whose minified bundle breaks the tray-menu patcher in
+      # scripts/patches/tray.sh ("Failed to extract tray menu function
+      # name"). Unpin once upstream fixes the regex for the new bundle.
+      url = "github:aaddrick/claude-desktop-debian/ba2846c8b3e99ac35563e6c2184dd999b19bbc95";
     };
 
     dsearch = {
+      # Pinned: newer revs ship a stale Go vendorHash upstream (hash mismatch
+      # in dsearch-go-modules). Unpin once upstream fixes their vendorHash.
       url = "github:AvengeMedia/danksearch/18591ecaa4b87acb222391f9aedd2fbbef9c087f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    helium-browser = {
+      url = "github:oxcl/nix-flake-helium-browser";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -61,13 +79,25 @@
       url = "github:danth/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Gerenciamento de segredos cifrados versionados no repo (age).
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Particionamento declarativo (usado só pelo host base + rodo-install).
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { nixpkgs, ... }@inputs:
   let
     system = "x86_64-linux";
 
-    mkHost = { hostPath, users }: nixpkgs.lib.nixosSystem {
+    mkHost = { hostPath, users, extraModules ? [] }: nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = { inherit inputs; };
       modules = [
@@ -82,24 +112,34 @@
                   doc = final.emptyDirectory;
                 };
               });
-              quickshell = inputs.quickshell.packages.${system}.default;
-
-              # Bun 1.3.14 — nixpkgs ainda está em 1.3.13, e o omp (oh-my-pi)
-              # exige >= 1.3.14. Só sobe a versão do binário, sem mexer no resto.
+              # nixpkgs trava o bun em 1.3.13; o omp exige >=1.3.14. Bump pro
+              # prebuilt oficial (só troca o zip, não compila).
               bun = prev.bun.overrideAttrs (_old: rec {
                 version = "1.3.14";
-                src = prev.fetchurl {
+                src = final.fetchurl {
                   url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-x64.zip";
                   hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
                 };
               });
+              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
+              openldap = prev.openldap.overrideAttrs (_old: {
+                doCheck = false;
+              });
+              quickshell = inputs.quickshell.packages.${system}.default;
             })
             inputs.claude-desktop.overlays.default
           ];
         }
 
+        # Editor de vídeo open source
+        ({ pkgs, ... }: {
+          environment.systemPackages = [ pkgs.kdePackages.kdenlive ];
+        })
+
         inputs.dms.nixosModules.default
+        inputs.dank-greeter.nixosModules.default
         inputs.stylix.nixosModules.stylix
+        inputs.agenix.nixosModules.default
         inputs.home-manager.nixosModules.default
         {
           home-manager = {
@@ -109,11 +149,31 @@
             users = builtins.mapAttrs (_name: path: import path) users;
           };
         }
-      ];
+      ] ++ extraModules;
     };
   in
   {
     nixosConfigurations = {
+      # ISO instaladora auto-provisionadora. Build:
+      #   nix build .#nixosConfigurations.rodo-installer.config.system.build.isoImage
+      rodo-installer = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; self = inputs.self; };
+        modules = [
+          ./modules/install/installer.nix
+          ./modules/install/rodo-install.nix
+        ];
+      };
+
+      # Host BASE — template do padrão da empresa. Copie hosts/base + use
+      # users/rodouser.nix pra provisionar máquinas novas.
+      base = mkHost {
+        hostPath = ./hosts/base;
+        users = { rodouser = ./users/rodouser.nix; };
+      };
+
+      # >>> RODO-INSTALL-HOSTS (não remova: âncora do rodo-install) <<<
+
       rodolucas = mkHost {
         hostPath = ./hosts/rodolucas;
         users = { lucasp = ./users/lucasp.nix; };
@@ -122,6 +182,30 @@
       laal = mkHost {
         hostPath = ./hosts/laal;
         users = { laal = ./users/laal.nix; };
+      };
+
+      rodojaisla = mkHost {
+        hostPath = ./hosts/rodojaisla;
+        users = { jaisla = ./users/jaisla.nix; };
+        extraModules = [
+          ({ pkgs, ... }: {
+            services.postgresql = {
+              enable = true;
+              ensureDatabases = [ "jaisla" ];
+              ensureUsers = [
+                {
+                  name = "jaisla";
+                  ensureDBOwnership = true;
+                }
+              ];
+              authentication = pkgs.lib.mkOverride 10 ''
+                local all all              trust
+                host  all all 127.0.0.1/32 trust
+                host  all all ::1/128      trust
+              '';
+            };
+          })
+        ];
       };
     };
   };

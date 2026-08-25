@@ -25,18 +25,20 @@ in
     (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
     zed-editor
     libreoffice-qt6-fresh
+    collabora-online
     wl-mirror
-    firefox-devedition
     insomnia
-
-    # oh-my-pi (omp) — wrapper bunx: sempre a última versão do npm, sem build.
-    # Core nativo roda via nix-ld (habilitado em modules/programs/dev.nix).
-    (writeShellScriptBin "omp" ''
-      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
-    '')
   ];
 
+  # Identidade git — aqui e não em users/shared.nix, senão todo mundo
+  # commitaria com a conta da laal.
+  programs.git.settings.user = {
+    name = "laralimamota";
+    email = "llmotadev@gmail.com";
+  };
+
   home.pointerCursor = {
+    enable = true;
     gtk.enable = true;
     x11.enable = true;
     package = pkgs.adwaita-icon-theme;

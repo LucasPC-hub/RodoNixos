@@ -22,8 +22,7 @@
       ls = "eza --icons";
       ll = "eza -la --icons";
       lt = "eza --tree --level=2 --icons";
-      cat = "bat";
-      fkr = "cd ~/RodoNixos && (command -v niri-sync >/dev/null && niri-sync || true) && sudo nixos-rebuild switch --flake '.#${osConfig.networking.hostName}'";
+      fkr = "cd ~/RodoNixos && (command -v niri-sync >/dev/null && niri-sync || true) && sudo nixos-rebuild switch --flake '.#${osConfig.networking.hostName}' && { command -v zen-backup >/dev/null && zen-backup & }";
     };
 
     plugins = [ ];

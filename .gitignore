@@ -1,0 +1,12 @@
+# Scripts operacionais de backup/migração — expõem topologia da infra
+# (namespace/buckets OCI, mount do NAS). Ficam só local.
+/scripts/oci-backup-creds.sh
+/scripts/migrate-oci-to-nas.sh
+/scripts/migrate-s3-to-oci.sh
+
+# Segredos/saídas em texto puro que nunca devem ir pro repo
+.env
+.env.*
+oci-backup-credentials.txt
+result-iso
+result

@@ -8,6 +8,6 @@
   });
   stylix.enableReleaseChecks = false;
 
-  # Só o console/TTY
   stylix.targets.console.enable = true;
+  stylix.targets.gtk.enable = true;
 }

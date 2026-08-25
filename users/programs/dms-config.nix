@@ -16,10 +16,12 @@ in
       chmod 644 "$dest"
     fi
 
-    # Sync dms/*.kdl
+    # Sync dms/*.kdl (outputs.kdl is managed by DMS, never overwrite)
     mkdir -p "${niriDir}/dms"
     for f in ${dmsConfigSrc}/*.kdl; do
-      dest="${niriDir}/dms/$(basename "$f")"
+      name="$(basename "$f")"
+      if [ "$name" = "outputs.kdl" ]; then continue; fi
+      dest="${niriDir}/dms/$name"
       if [ ! -f "$dest" ] || ! cmp -s "$f" "$dest"; then
         cp "$f" "$dest"
         chmod 644 "$dest"

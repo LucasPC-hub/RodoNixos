@@ -31,7 +31,8 @@ in
         done
       '';
     })
-    vesktop
+    firefox-devedition
+    discord
     thunar
     adw-gtk3
     kdePackages.qt6ct
@@ -40,6 +41,10 @@ in
     calf
     bubblewrap
     wl-clipboard # needed for image paste in Claude Code
+    cifs-utils
+    tcpdump
+    arping
+    nettools
   ];
 
   programs.fish.enable = true;

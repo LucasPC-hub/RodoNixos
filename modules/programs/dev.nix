@@ -17,7 +17,7 @@ let
 in
 {
   environment.systemPackages = with pkgs; [
-    # Ferramentas
+    # Ferramentas de uso geral (não específicas de projeto)
     gcc
     gh
     gnumake
@@ -26,36 +26,40 @@ in
     docker-buildx
     lazydocker
 
-    # Node
-    nodejs_22
-    pnpm
-    bun
-    yarn
+    # NOTA: toolchains de linguagem (Node/npm/pnpm/bun/yarn, Java, Python,
+    # Rust, deps de build do Electrobun) NÃO ficam mais globais.
+    # Use um devShell por projeto: flake.nix + `.envrc` (`use flake`),
+    # carregado automaticamente pelo direnv/nix-direnv (users/shared.nix).
 
-    # Java
-    jdk21
-    maven
-    gradle
-
-    # Python
-    python312
-    python312Packages.pip
-
-    # Electrobun
-    cmake
-    pkg-config
-    gtk3
-    webkitgtk_4_1
-    libayatana-appindicator
-    librsvg
-    gsettings-desktop-schemas
-    shared-mime-info
-
-    # Rust
-    rustup
+    # Rede — diagnóstico e testes
+    nmap            # scan de portas/serviços
+    mtr             # traceroute + ping contínuo
+    traceroute
+    dnsutils        # dig, nslookup
+    whois
+    tcpdump         # captura de pacotes (CLI)
+    termshark       # tshark com TUI (wireshark no terminal)
+    socat           # relay/proxy de sockets
+    netcat-gnu      # nc
+    iperf3          # benchmark de throughput TCP/UDP
+    ethtool         # info/config de NIC
+    bandwhich       # uso de banda por processo (TUI)
+    gping           # ping com gráfico
+    ipcalc          # cálculo de subnets
+    httpie          # cliente HTTP amigável
 
     # API client
     bruno
+
+    # Bun global (1.3.14 via overlay no flake.nix — nixpkgs ainda está em 1.3.13)
+    bun
+
+    # Coding agents (CLI)
+    # oh-my-pi (omp) — wrapper bunx: sempre a última versão do npm, sem build.
+    # O core nativo roda via nix-ld.
+    (writeShellScriptBin "omp" ''
+      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
+    '')
 
     # IDEs
     (withNvidiaOffload jetbrains.datagrip)
