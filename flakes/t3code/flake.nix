@@ -23,7 +23,7 @@
 
         extraInstallCommands =
           let
-            appimageContents = pkgs.appimageTools.extractType2 { inherit pname version src; };
+            appimageContents = pkgs.appimageTools.extract { inherit pname version src; };
           in ''
             # Desktop entry & icon
             install -Dm444 ${appimageContents}/t3-code-desktop.desktop $out/share/applications/t3-code.desktop

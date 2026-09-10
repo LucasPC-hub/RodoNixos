@@ -20,7 +20,6 @@ in
     tree
     pciutils
     inputs.claude-code.packages.${system}.default
-    claude-desktop
     (pkgs.symlinkJoin {
       name = "zen-browser-wrapped";
       paths = [ inputs.zen-browser.packages.${system}.default ];
@@ -36,7 +35,7 @@ in
     thunar
     adw-gtk3
     kdePackages.qt6ct
-    (colloid-icon-theme.override { schemeVariants = [ "all" ]; })
+    colloid-icon-theme
     easyeffects
     calf
     bubblewrap
@@ -53,4 +52,8 @@ in
     binfmt = true;
   };
   security.polkit.enable = true;
+
+  services.gnome.gnome-keyring.enable = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
+  programs.seahorse.enable = true;
 }

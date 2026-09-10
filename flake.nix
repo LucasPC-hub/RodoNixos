@@ -1,4 +1,4 @@
-    {
+{
   description = "RodoNixos - NixOS com kernel CachyOS";
 
   inputs = {
@@ -9,11 +9,6 @@
 
     home-manager = {
       url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixvim = {
-      url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -40,18 +35,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    claude-desktop = {
-      # Pinned to 1.7196.3 (2026-05-19). Newer commits bump to 1.8089.1,
-      # whose minified bundle breaks the tray-menu patcher in
-      # scripts/patches/tray.sh ("Failed to extract tray menu function
-      # name"). Unpin once upstream fixes the regex for the new bundle.
-      url = "github:aaddrick/claude-desktop-debian/ba2846c8b3e99ac35563e6c2184dd999b19bbc95";
-    };
-
     dsearch = {
-      # Pinned: newer revs ship a stale Go vendorHash upstream (hash mismatch
-      # in dsearch-go-modules). Unpin once upstream fixes their vendorHash.
-      url = "github:AvengeMedia/danksearch/18591ecaa4b87acb222391f9aedd2fbbef9c087f";
+      url = "github:AvengeMedia/danksearch";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -122,18 +107,7 @@
                 };
               });
               quickshell = inputs.quickshell.packages.${system}.default;
-              # nixpkgs bumpou libdisplay-info pra 0.4.0, mas o niri 26.04
-              # ainda usa a crate libdisplay-info-sys 0.3.0 (exige < 0.4.0).
-              # Aponta o niri pro libdisplay-info_0_2 (0.2.0), que satisfaz.
-              niri = prev.niri.overrideAttrs (old: {
-                buildInputs = map
-                  (p: if (p.pname or "") == "libdisplay-info"
-                      then final.libdisplay-info_0_2
-                      else p)
-                  old.buildInputs;
-              });
             })
-            inputs.claude-desktop.overlays.default
           ];
         }
 

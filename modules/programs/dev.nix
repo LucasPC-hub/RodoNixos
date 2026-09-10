@@ -61,6 +61,11 @@ in
       exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
     '')
 
+    (writeShellScriptBin "cline" ''
+      export PATH="${nodejs}/bin:$HOME/.bun/bin:$PATH"
+      exec ${bun}/bin/bunx --bun cline@latest "$@"
+    '')
+
     # IDEs
     (withNvidiaOffload jetbrains.datagrip)
   ];
