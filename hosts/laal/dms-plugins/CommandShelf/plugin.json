@@ -1,0 +1,14 @@
+{
+    "id": "commandShelf",
+    "name": "Meus Comandos",
+    "description": "Widget de desktop com os comandos do help/ajuda por categoria, busca e cópia segura",
+    "version": "1.0.0",
+    "author": "Matheuscara",
+    "license": "MIT",
+    "type": "desktop",
+    "capabilities": ["desktop-widget"],
+    "component": "./CommandShelf.qml",
+    "icon": "terminal",
+    "requires_dms": ">=1.4.6",
+    "requires": ["python3"]
+}

@@ -31,6 +31,10 @@ in
     inputs.t3code.packages.${pkgs.stdenv.hostPlatform.system}.default
     inputs.cmux.packages.${pkgs.stdenv.hostPlatform.system}.default
     jamesdsp
+    # Editor de vídeo. Estava em environment.systemPackages no mkHost do
+    # flake.nix, o que instalava em TODOS os hosts; compila do zero (~570
+    # alvos C++/Qt) e quebrava o rebuild de quem nem usa. Movido pra cá.
+    kdePackages.kdenlive
     remmina
     freerdp
     awscli2

@@ -11,6 +11,11 @@
     # Binary cache do kernel CachyOS
     substituters = [ "https://attic.xuyh0120.win/lantian" ];
     trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
+    # Se esse cache cair (ficou fora do ar em 15/10/2026 e quebrou o fkr com
+    # "unable to download ... narinfo"), não travar: desiste rápido e, se
+    # precisar, compila localmente em vez de abortar.
+    connect-timeout = 5;
+    fallback = true;
   };
 
   # Varre lixo órfão do /nix/store por tempo (paths não referenciados há +7d).

@@ -169,7 +169,7 @@ environment {
   QT_SCALE_FACTOR "1.5"
   TERMINAL "kitty"
   BROWSER "zen-beta"
-  FILES "thunar"
+  FILES "dolphin"
 }
 hotkey-overlay {
     skip-at-startup
@@ -259,6 +259,29 @@ window-rule {
     match app-id="zoom"
     open-floating true
 }
+// Vidro (liquid glass) nos widgets da área de trabalho do DMS: o DMS só
+// pede blur pra barra, popups e launcher; os widgets da área de trabalho
+// ficam só transparentes. O niri borra o que está atrás da camada inteira,
+// por isso só nos widgets sem cartão próprio (painéis de comando e monitor
+// de sistema); nos que desenham cartão com margem (explorador, CommandShelf,
+// mídia...) o blur viraria uma moldura em volta.
+layer-rule {
+    match namespace="^dms:desktop-widget:(desktopCommand|systemMonitor)"
+    background-effect {
+        blur true
+    }
+    geometry-corner-radius 20
+}
+// Dolphin de vidro: janela levemente translúcida e o niri borra o que está
+// atrás dela (as cores vêm do tema dinâmico do DMS, via kdeglobals).
+window-rule {
+    match app-id=r#"^org\.kde\.dolphin$"#
+    opacity 0.9
+    draw-border-with-background false
+    background-effect {
+        blur true
+    }
+}
 // Open dms windows as floating by default
 window-rule {
     match app-id=r#"org.quickshell$"#
@@ -285,3 +308,5 @@ include "dms/alttab.kdl"
 include "dms/binds.kdl"
 include "dms/outputs.kdl"
 include "dms/cursor.kdl"
+
+include "dms-theme-sync.kdl"

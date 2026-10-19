@@ -1,0 +1,12 @@
+{
+  "id": "relogioWindows",
+  "name": "Relógio estilo Windows",
+  "description": "Relógio da barra em duas linhas, hora em cima e data embaixo, como na barra de tarefas do Windows. Clique abre o painel do DMS (calendário).",
+  "version": "1.0.0",
+  "author": "laal",
+  "type": "widget",
+  "capabilities": ["dankbar-widget"],
+  "component": "./RelogioWindows.qml",
+  "icon": "schedule",
+  "requires_dms": ">=1.4.0"
+}

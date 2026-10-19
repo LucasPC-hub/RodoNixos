@@ -11,7 +11,6 @@ in
     neovim
     wget
     curl
-    htop
     unzip
     ripgrep
     fd
@@ -31,9 +30,6 @@ in
         done
       '';
     })
-    firefox-devedition
-    discord
-    thunar
     adw-gtk3
     kdePackages.qt6ct
     (colloid-icon-theme.override { schemeVariants = [ "all" ]; })

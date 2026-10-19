@@ -6,20 +6,33 @@ binds {
     
     // === Application Launchers ===
     Super+T hotkey-overlay-title="Open Terminal" { spawn "kitty"; }
-    Super+E hotkey-overlay-title="File Manager" { spawn "dolphin"; }
+    Super+E hotkey-overlay-title="File Manager (Dolphin)" { spawn "dolphin"; }
     Mod+Space hotkey-overlay-title="Application Launcher" { 
         spawn "dms" "ipc" "call" "spotlight" "toggle"; 
     }
     Mod+V hotkey-overlay-title="Clipboard Manager" { 
         spawn "dms" "ipc" "call" "clipboard" "toggle"; 
     }
-    Mod+M hotkey-overlay-title="Task Manager" { 
-        spawn "dms" "ipc" "call" "processlist" "toggle"; 
-    }
+    // Gerenciador de tarefas estilo Windows: agrupa por app (precisa dos
+    // apps abertos via app2unit — launchPrefix do DMS).
+    Mod+M hotkey-overlay-title="Task Manager" { spawn "app2unit" "-t" "scope" "--" "missioncenter"; }
+    Ctrl+Shift+Escape hotkey-overlay-title="Task Manager" { spawn "app2unit" "-t" "scope" "--" "missioncenter"; }
     Mod+Comma hotkey-overlay-title="Settings" { 
         spawn "dms" "ipc" "call" "settings" "toggle"; 
     }
     Super+N hotkey-overlay-title="Notification Center" { spawn "dms" "ipc" "call" "notifications" "toggle"; }
+    Super+Shift+N hotkey-overlay-title="Notepad" { spawn "dms" "ipc" "call" "notepad" "toggle"; }
+    Super+Y hotkey-overlay-title="Browse Wallpapers" { spawn "dms" "ipc" "call" "dankdash" "wallpaper"; }
+    // Atenção: no navegador Ctrl+Shift+R é "recarregar sem cache"; o niri
+    // captura antes, então lá ele deixa de funcionar.
+    Ctrl+Shift+R hotkey-overlay-title="Rename Workspace" { spawn "dms" "ipc" "call" "workspace-rename" "open"; }
+    Super+Shift+W hotkey-overlay-title="Create window rule" { spawn "dms" "ipc" "call" "window-rules" "toggle"; }
+    // Atalhos trazidos do repo do Matheus.
+    Super+G hotkey-overlay-title="Nord Hub" { spawn "dms" "ipc" "call" "widget" "toggle" "nordHub"; }
+    Super+Ctrl+W repeat=false hotkey-overlay-title="Escolher wallpaper" { spawn "dms" "ipc" "call" "wallpaperCarousel" "toggle"; }
+    Super+Ctrl+D repeat=false hotkey-overlay-title="Docker" { spawn "dms" "ipc" "call" "widget" "toggle" "dockerDashboard"; }
+    Super+Shift+B repeat=false hotkey-overlay-title="Bitwarden" { spawn "dms" "ipc" "call" "bitwarden" "toggle"; }
+    Super+Shift+C repeat=false hotkey-overlay-title="Calculadora" { spawn "dms" "ipc" "call" "launcher" "openQuery" "= "; }
     
     // === Security ===
     Super+L hotkey-overlay-title="Lock Screen" { 
@@ -67,7 +80,6 @@ binds {
     Mod+Shift+F { fullscreen-window; }
     Mod+Shift+T { toggle-window-floating; }
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
-    Mod+Shift+W { toggle-column-tabbed-display; }
     
     // === Focus Navigation ===
     Mod+Left  { focus-column-left; }

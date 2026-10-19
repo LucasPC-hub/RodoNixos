@@ -41,7 +41,6 @@ in
     jdt-language-server
     collabora-online
     aseprite
-    libreoffice-fresh
   ];
 
   home.pointerCursor = {

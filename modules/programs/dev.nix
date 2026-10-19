@@ -1,20 +1,5 @@
 { pkgs, ... }:
 
-let
-  withNvidiaOffload = pkg: pkgs.symlinkJoin {
-    name = "${pkg.pname or pkg.name}-nvidia";
-    paths = [ pkg ];
-    buildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      for bin in $out/bin/*; do
-        wrapProgram "$bin" \
-          --set __NV_PRIME_RENDER_OFFLOAD 1 \
-          --set __GLX_VENDOR_LIBRARY_NAME nvidia \
-          --set __VK_LAYER_NV_optimus NVIDIA_only
-      done
-    '';
-  };
-in
 {
   environment.systemPackages = with pkgs; [
     # Ferramentas de uso geral (não específicas de projeto)
@@ -55,14 +40,25 @@ in
     bun
 
     # Coding agents (CLI)
-    # oh-my-pi (omp) — wrapper bunx: sempre a última versão do npm, sem build.
+    # oh-my-pi (omp) — wrapper bunx, versão fixa, sem build. Antes era @latest, que
+    # resolvia pela rede a cada partida e travava o start em rede lenta. Para subir
+    # de versão: trocar o número abaixo e rodar nixos-rebuild.
     # O core nativo roda via nix-ld.
+    #
+    # O bin do pacote é dist/cli.js com shebang `#!/usr/bin/env bun`, então quem
+    # executa é o primeiro bun do PATH, e não o bunx apontado aqui. Devshells que
+    # trazem bun próprio (o do vitrum trava em 1.3.13) sombreavam o nosso e
+    # estouravam o check de versão do omp. Daí fixarmos o nosso bun na frente do
+    # PATH: ${bun}/bin tem só bun e bunx, então node/pnpm do devshell continuam
+    # intactos dentro da sessão do omp.
     (writeShellScriptBin "omp" ''
-      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@latest "$@"
+      export PATH=${bun}/bin:$PATH
+      exec ${bun}/bin/bunx --bun @oh-my-pi/pi-coding-agent@18.4.9 "$@"
     '')
 
-    # IDEs
-    (withNvidiaOffload jetbrains.datagrip)
+    # Navegador para automação por IA (omp browser / Puppeteer / Playwright).
+    # Chromium do nixpkgs: roda nativo, sem depender do nix-ld.
+    chromium
   ];
 
   # GSettings/dconf for GTK apps (file dialogs, etc.)
@@ -75,6 +71,11 @@ in
   environment.extraInit = ''
     export XDG_DATA_DIRS="$XDG_DATA_DIRS:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
   '';
+  # Puppeteer/Playwright usam o Chromium do sistema em vez do binário baixado.
+  environment.variables = {
+    PUPPETEER_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
+    CHROME_PATH = "${pkgs.chromium}/bin/chromium";
+  };
 
   # Permitir binários dinâmicos (ex: electrobun, vscode extensions)
   programs.nix-ld.enable = true;
@@ -90,7 +91,35 @@ in
     at-spi2-atk
     harfbuzz
     libayatana-appindicator
+
+    # Chromium baixado pelo Puppeteer/Playwright (o do omp) — headless shell
+    nspr
+    nss
+    atk
+    cups
+    dbus
+    expat
+    libdrm
+    libgbm
+    mesa
+    alsa-lib
+    libxkbcommon
+    libx11
+    libxcomposite
+    libxdamage
+    libxext
+    libxfixes
+    libxrandr
+    libxcb
+    libxshmfence
+    udev
   ];
+
+  # adb precisa abrir o celular via USB; uaccess dá ACL ao usuário logado.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="*:ff4201:*", TAG+="uaccess"
+    SUBSYSTEM=="usb", ATTR{idVendor}=="04e8", TAG+="uaccess"
+  '';
 
   virtualisation.docker = {
     enable = true;

@@ -17,6 +17,10 @@
     config = {
       niri.default = [ "gnome" "gtk" ];
       common.default = [ "gnome" "gtk" ];
+      # O FileChooser do portal gnome é implementado pelo Nautilus, que não
+      # está instalado; o do gtk usa o diálogo GTK e não depende dele.
+      niri."org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+      common."org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
     };
   };
 
@@ -42,11 +46,11 @@
       enable = true;
       restartIfChanged = true;
     };
-    enableSystemMonitoring = true;
-    enableVPN = true;
-    enableDynamicTheming = true;
-    enableAudioWavelength = true;
-    enableCalendarEvents = true;
-    enableClipboardPaste = true;
+    # As opcoes enableVPN, enableDynamicTheming, enableAudioWavelength e
+    # enableCalendarEvents foram removidas pelo DMS em 01/10/2026. Motivos:
+    #   VPN e rede: o DMS detecta os backends em runtime.
+    #   matugen (tema dinamico) e cava (wavelength): ja vem no ambiente padrao.
+    #     Para tirar, usar programs.dms-shell.excludePackages.
+    #   calendario: instalar um backend separado e escolher nas settings do DMS.
   };
 }

@@ -1,0 +1,30 @@
+diff --git a/HandMirrorWidget.qml b/HandMirrorWidget.qml
+index a0cde3a..ab2fe1c 100644
+--- a/HandMirrorWidget.qml
++++ b/HandMirrorWidget.qml
+@@ -15,7 +15,10 @@ PluginComponent {
+     id: root
+ 
+     property var popoutService: null
+-    property bool popoutOpen: false
++    // O DMS mantém o conteúdo do popout carregado depois de fechar, então
++    // Component.onDestruction não roda e a câmera ficava ligada; segue se o
++    // popout está aberto de fato (`interactionActive` do PluginComponent).
++    readonly property bool popoutOpen: root.interactionActive
+     
+     // Snapshot preview states
+     property string previewPath: ""
+@@ -816,13 +819,6 @@ PluginComponent {
+             headerText: ""
+             showCloseButton: false
+ 
+-            Component.onCompleted: {
+-                root.popoutOpen = true;
+-            }
+-            Component.onDestruction: {
+-                root.popoutOpen = false;
+-            }
+-
+             Item {
+                 width: parent.width
+                 height: root.popoutHeight

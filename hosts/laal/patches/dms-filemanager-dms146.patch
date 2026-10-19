@@ -1,0 +1,2216 @@
+diff -ruN a/appimage_icon.py b/appimage_icon.py
+--- a/appimage_icon.py
++++ b/appimage_icon.py
+@@ -0,0 +1,212 @@
++#!/usr/bin/env python3
++"""Statically extract an AppImage icon into the icon cache.
++
++Usage: appimage_icon.py <appimage> <cache_dir> <stem>
++
++The AppImage is never executed. Its ELF runtime header is parsed to locate
++the embedded SquashFS image, which is read with unsquashfs (-lls / -cat)
++straight into this process; nothing from the image is unpacked to disk.
++
++Exit status / output:
++  0  icon cached; its absolute path is printed on stdout
++  2  no safely readable icon (not a type-2 SquashFS AppImage, or no icon)
++  1  error; reason on stderr
++"""
++import os
++import re
++import resource
++import selectors
++import stat
++import struct
++import subprocess
++import sys
++import tempfile
++import time
++
++# The parent package may substitute an absolute store path here.
++UNSQUASHFS = "unsquashfs"
++
++MAX_ICON_BYTES = 4 * 1024 * 1024
++MAX_LISTING_BYTES = 8 * 1024 * 1024
++CALL_TIMEOUT = 20.0
++SAFE_STEM = re.compile(r"[^/\x00-\x1f\x7f.][^/\x00-\x1f\x7f]{0,127}")
++# "-rw-r--r-- user/group   1234 2024-01-01 00:00 squashfs-root/name"
++LISTING_LINE = re.compile(
++    r"([-dlbcps])\S{9} \S+ +(\d+) \d{4}-\d\d-\d\d \d\d:\d\d squashfs-root/(.+)")
++
++
++class NoIcon(Exception):
++    pass
++
++
++def squashfs_offset(fd, size):
++    """Offset of the SquashFS image appended to the ELF runtime."""
++    hdr = os.pread(fd, 64, 0)
++    if len(hdr) < 64 or hdr[:4] != b"\x7fELF":
++        raise NoIcon("not an ELF (type-2) AppImage")
++    endian = {1: "<", 2: ">"}.get(hdr[5])
++    if endian is None:
++        raise NoIcon("unknown ELF byte order")
++    if hdr[4] == 2:
++        (shoff,) = struct.unpack_from(endian + "Q", hdr, 0x28)
++        shentsize, shnum = struct.unpack_from(endian + "HH", hdr, 0x3A)
++    elif hdr[4] == 1:
++        (shoff,) = struct.unpack_from(endian + "I", hdr, 0x20)
++        shentsize, shnum = struct.unpack_from(endian + "HH", hdr, 0x2E)
++    else:
++        raise NoIcon("unknown ELF class")
++    offset = shoff + shentsize * shnum
++    if not 0 < offset < size or os.pread(fd, 4, offset) != b"hsqs":
++        raise NoIcon("no SquashFS image after the ELF runtime")
++    return offset
++
++
++def _deny_file_writes():
++    # unsquashfs is only asked to list or cat to a pipe; refuse any file writes.
++    resource.setrlimit(resource.RLIMIT_FSIZE, (0, 0))
++
++
++def run_capped(args, fd, limit):
++    """Run unsquashfs, returning stdout bytes, or None on failure/overflow/timeout."""
++    try:
++        proc = subprocess.Popen(
++            [UNSQUASHFS] + args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
++            stderr=subprocess.DEVNULL, pass_fds=(fd,), cwd="/", close_fds=True,
++            preexec_fn=_deny_file_writes)
++    except FileNotFoundError:
++        raise RuntimeError("unsquashfs (squashfs-tools >= 4.6) not found")
++    chunks, total, ok = [], 0, True
++    deadline = time.monotonic() + CALL_TIMEOUT
++    with selectors.DefaultSelector() as sel:
++        sel.register(proc.stdout, selectors.EVENT_READ)
++        while True:
++            remaining = deadline - time.monotonic()
++            if remaining <= 0 or not sel.select(remaining):
++                ok = False
++                break
++            data = os.read(proc.stdout.fileno(), 65536)
++            if not data:
++                break
++            total += len(data)
++            if total > limit:
++                ok = False
++                break
++            chunks.append(data)
++    if not ok:
++        proc.kill()
++    proc.stdout.close()
++    if proc.wait() != 0 or not ok:
++        return None
++    return b"".join(chunks)
++
++
++def image_ext(data):
++    if data.startswith(b"\x89PNG\r\n\x1a\n"):
++        return "png"
++    if data.startswith(b"\xff\xd8\xff"):
++        return "jpg"
++    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
++        return "webp"
++    if b"<svg" in data[:4096].lower():
++        return "svg"
++    return None
++
++
++def list_entries(fd, base, extra):
++    out = run_capped(["-o", str(base), "-lls", "-UTC"] + extra, fd, MAX_LISTING_BYTES)
++    entries = []
++    for raw in (out or b"").decode("utf-8", "surrogateescape").split("\n"):
++        m = LISTING_LINE.fullmatch(raw)
++        if not m:
++            continue
++        kind, size, name = m.group(1), int(m.group(2)), m.group(3)
++        if kind == "l":
++            name = name.split(" -> ", 1)[0]
++            size = 0  # link length, not icon size: rank after regular files
++        elif kind != "-":
++            continue
++        entries.append((name, kind, size))
++    return entries
++
++
++def ranked(entries, exts, limit=3):
++    picks = [e for e in entries if e[0].lower().rsplit(".", 1)[-1] in exts]
++    picks.sort(key=lambda e: (e[1] != "-", -e[2]))
++    return [e[0] for e in picks[:limit]]
++
++
++def candidates(fd, base):
++    """Same priority as the old staged extraction: root png, root svg,
++    .DirIcon, then usr/share/{icons,pixmaps}."""
++    root = list_entries(fd, base, ["-max-depth", "1", "/dev/fd/%d" % fd])
++    yield from ranked(root, {"png"})
++    yield from ranked(root, {"svg"})
++    yield ".DirIcon"
++    themed = []
++    for subtree in ("usr/share/icons", "usr/share/pixmaps"):
++        themed += list_entries(fd, base, ["/dev/fd/%d" % fd, subtree])
++    yield from ranked(themed, {"png", "svg", "jpg", "jpeg", "webp"})
++
++
++def read_icon(fd, base, name):
++    # -cat resolves symlinks inside the image only; it never reads host paths.
++    return run_capped(["-o", str(base), "-no-wildcards", "-cat", "/dev/fd/%d" % fd, name],
++                      fd, MAX_ICON_BYTES)
++
++
++def store(cache_dir, stem, ext, data):
++    os.makedirs(cache_dir, mode=0o700, exist_ok=True)
++    dest = os.path.join(cache_dir, stem + "." + ext)
++    tfd, tmp = tempfile.mkstemp(dir=cache_dir, prefix=".icon-")
++    try:
++        with os.fdopen(tfd, "wb") as f:
++            f.write(data)
++        os.chmod(tmp, 0o644)
++        os.replace(tmp, dest)
++    except BaseException:
++        os.unlink(tmp)
++        raise
++    return dest
++
++
++def main(argv):
++    if len(argv) != 3:
++        print("usage: appimage_icon.py <appimage> <cache_dir> <stem>", file=sys.stderr)
++        return 1
++    app_path, cache_dir, stem = argv
++    if not SAFE_STEM.fullmatch(stem) or not os.path.isabs(cache_dir):
++        print("unsafe icon cache name: %r" % stem, file=sys.stderr)
++        return 1
++    try:
++        # O_NONBLOCK: a FIFO named *.AppImage must not hang the open.
++        fd = os.open(app_path, os.O_RDONLY | os.O_NONBLOCK)
++    except OSError as e:
++        print("cannot open %s: %s" % (app_path, e.strerror), file=sys.stderr)
++        return 1
++    try:
++        st = os.fstat(fd)
++        if not stat.S_ISREG(st.st_mode):
++            raise NoIcon("not a regular file")
++        base = squashfs_offset(fd, st.st_size)
++        seen = set()
++        for name in candidates(fd, base):
++            if name in seen:
++                continue
++            seen.add(name)
++            data = read_icon(fd, base, name)
++            ext = image_ext(data) if data else None
++            if ext:
++                print(store(cache_dir, stem, ext, data))
++                return 0
++        raise NoIcon("no icon in image")
++    except NoIcon:
++        return 2
++    except (OSError, RuntimeError) as e:
++        print("icon extraction failed for %s: %s" % (app_path, e), file=sys.stderr)
++        return 1
++    finally:
++        os.close(fd)
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv[1:]))
+diff -ruN a/components/DmsFileManagerCreateAppDialog.qml b/components/DmsFileManagerCreateAppDialog.qml
+--- a/components/DmsFileManagerCreateAppDialog.qml
++++ b/components/DmsFileManagerCreateAppDialog.qml
+@@ -73,11 +73,6 @@
+ 
+     Component.onCompleted: _loadPluginTranslations(pluginLanguage)
+ 
+-    // Quote an arbitrary string as a single-quoted POSIX shell word
+-    function _shellQuote(s) {
+-        return "'" + String(s).replace(/'/g, "'\\''") + "'";
+-    }
+-
+     function fetchApps() {
+         // Fetch all apps directly from Quickshell's DesktopEntries singleton
+         const allEntries = DesktopEntries.applications.values;
+@@ -324,7 +319,7 @@
+                                         }
+                                         StyledText {
+                                             text: model.appExec
+-                                            font.pixelSize: Theme.fontSizeTiny
++                                            font.pixelSize: Theme.fontSizeTiny ?? Theme.fontSizeSmall
+                                             color: Theme.surfaceVariantText
+                                             elide: Text.ElideRight
+                                             maximumLineCount: 2
+@@ -437,27 +432,82 @@
+         if (pathStr.startsWith("localhost/")) {
+             pathStr = pathStr.substring(9);
+         }
+-        return pathStr;
+-    }
+-
+-    function createSystemAppShortcut(appName, appExec, appIcon) {
+-        let pathStr = getTargetFolder();
+-        let safeName = appName.replace(/[^a-zA-Z0-9_-]/g, "_");
+-        const targetPath = pathStr + "/" + safeName + ".desktop";
+-        const content = "[Desktop Entry]\nType=Application\nName=" + appName + "\nExec=" + appExec + "\nIcon=" + appIcon + "\nTerminal=false\n";
+         try {
+-            const shellCmd = "printf '%s' " + _shellQuote(content) + " > " + _shellQuote(targetPath) + " 2>&1";
+-            Proc.runCommand("createAppShortcut-" + Math.random(), ["sh", "-c", shellCmd], function(out, code) {
+-                if (code !== 0) {
+-                    var err = out && out.trim() ? out.trim() : "";
+-                    if (err.length > 120) err = err.substring(0, 120) + "…";
+-                    ToastService.showToast(i18n("Create failed") + (err ? ": " + err : ""), ToastService.levelError);
+-                }
+-            });
++            return decodeURIComponent(pathStr);
+         } catch (e) {
+-            ToastService.showToast(i18n("Create failed") + ": " + e.message, ToastService.levelError);
++            return pathStr;
+         }
+-        createAppDialog.close();
++    }
++
++    // Creates <dir>/<name> exclusively (O_CREAT|O_EXCL: never follows or
++    // replaces an existing entry, dangling links included) with mode 0755
++    // so the launcher passes the file manager's executable-launcher check.
++    // A failed write removes only the file created here.
++    // Exit 0 ok, 3 name exists, 2 invalid name, 1 error; message on stdout.
++    readonly property string _createExclusiveScript: [
++        "import os, sys",
++        "d, name, content = sys.argv[1:4]",
++        "if not name or '/' in name or name.startswith('.'):",
++        "    print('invalid file name'); sys.exit(2)",
++        "path = os.path.join(d, name)",
++        "try:",
++        "    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o755)",
++        "except FileExistsError:",
++        "    print(name + ' already exists'); sys.exit(3)",
++        "except OSError as e:",
++        "    print(e.strerror or e); sys.exit(1)",
++        "try:",
++        "    with os.fdopen(fd, 'wb') as f:",
++        "        f.write(content.encode('utf-8'))",
++        "except OSError as e:",
++        "    os.unlink(path)",
++        "    print(e.strerror or e); sys.exit(1)"
++    ].join("\n")
++
++    property bool _creating: false
++
++    // Desktop-entry values are single lines; control characters would
++    // inject extra keys.
++    function _desktopValue(s) {
++        return String(s).replace(/[\x00-\x1f\x7f]+/g, " ").trim();
++    }
++
++    function _desktopContent(name, execVal, iconVal) {
++        return "[Desktop Entry]\nType=Application\nName=" + _desktopValue(name) + "\nExec=" + _desktopValue(execVal) + "\nIcon=" + _desktopValue(iconVal) + "\nTerminal=false\n";
++    }
++
++    // onConflict(fileName) runs when the name is taken; the dialog stays
++    // open on any failure so another name can be chosen.
++    function _createLauncher(fileName, content, onConflict) {
++        if (createAppDialog._creating)
++            return;
++        createAppDialog._creating = true;
++        Proc.runCommand("createApp-" + Math.random(), ["python3", "-c", createAppDialog._createExclusiveScript, getTargetFolder(), fileName, content], function(out, code) {
++            createAppDialog._creating = false;
++            var err = String(out || "").trim();
++            if (err.length > 120) err = err.substring(0, 120) + "…";
++            if (code === 0) {
++                createAppDialog.close();
++            } else if (code === 3) {
++                ToastService.showToast(i18n("Create failed") + ": " + i18n("%1 already exists, choose another name").arg(fileName), ToastService.levelWarn);
++                onConflict(fileName);
++            } else {
++                ToastService.showToast(i18n("Create failed") + (err ? ": " + err : ""), ToastService.levelError);
++            }
++        }, 0, Proc.noTimeout);
++    }
++
++    function createSystemAppShortcut(appName, appExec, appIcon) {
++        let safeName = String(appName).replace(/[^a-zA-Z0-9_-]/g, "_") || "app";
++        _createLauncher(safeName + ".desktop", _desktopContent(appName, appExec, appIcon), function() {
++            // Hand over to the custom form, prefilled, to pick another name
++            nameField.text = safeName;
++            execField.text = _desktopValue(appExec);
++            iconField.text = _desktopValue(appIcon);
++            modeStack.currentIndex = 1;
++            nameField.forceActiveFocus();
++            nameField.selectAll();
++        });
+     }
+ 
+     function performCreate() {
+@@ -466,7 +516,16 @@
+         let iconVal = iconField.text.trim();
+ 
+         if (name.length === 0 || execVal.length === 0) {
+-            ToastService.showToast(i18n("App name and Command are required"), ToastService.levelWarning);
++            ToastService.showToast(i18n("App name and Command are required"), ToastService.levelWarn);
++            return;
++        }
++
++        const fileName = name.endsWith(".desktop") ? name : name + ".desktop";
++        // A single visible file name: no path separators, control
++        // characters, or leading dot (covers "." and "..")
++        if (/[\/\x00-\x1f\x7f]/.test(fileName) || fileName.startsWith(".")) {
++            ToastService.showToast(i18n("Create failed") + ": " + i18n("App name must be a single file name"), ToastService.levelWarn);
++            nameField.forceActiveFocus();
+             return;
+         }
+ 
+@@ -474,25 +533,9 @@
+             iconVal = "application-x-executable";
+         }
+ 
+-        let pathStr = getTargetFolder();
+-        const fileName = name.endsWith(".desktop") ? name : name + ".desktop";
+-        const targetPath = pathStr + "/" + fileName;
+-
+-        const content = "[Desktop Entry]\nType=Application\nName=" + name + "\nExec=" + execVal + "\nIcon=" + iconVal + "\nTerminal=false\n";
+-
+-        try {
+-            // Write to file cleanly using POSIX printf, removing dependency on python3 for writing files
+-            const shellCmd = "printf '%s' " + _shellQuote(content) + " > " + _shellQuote(targetPath) + " 2>&1";
+-            Proc.runCommand("createApp-" + Math.random(), ["sh", "-c", shellCmd], function(out, code) {
+-                if (code !== 0) {
+-                    var err = out && out.trim() ? out.trim() : "";
+-                    if (err.length > 120) err = err.substring(0, 120) + "…";
+-                    ToastService.showToast(i18n("Create failed") + (err ? ": " + err : ""), ToastService.levelError);
+-                }
+-            });
+-        } catch (e) {
+-            ToastService.showToast(i18n("Create failed") + ": " + e.message, ToastService.levelError);
+-        }
+-        createAppDialog.close();
++        _createLauncher(fileName, _desktopContent(name, execVal, iconVal), function() {
++            nameField.forceActiveFocus();
++            nameField.selectAll();
++        });
+     }
+ }
+diff -ruN a/components/DmsFileManagerCreateDialog.qml b/components/DmsFileManagerCreateDialog.qml
+--- a/components/DmsFileManagerCreateDialog.qml
++++ b/components/DmsFileManagerCreateDialog.qml
+@@ -16,10 +16,6 @@
+     focus: true
+     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+ 
+-    Keys.onPressed: event => {
+-        if (event.key === Qt.Key_Escape) { close(); event.accepted = true; }
+-    }
+-
+     x: parent ? Math.round((parent.width - width) / 2) : 0
+     y: parent ? Math.round((parent.height - height) / 2) : 0
+ 
+@@ -94,6 +90,11 @@
+     }
+ 
+     contentItem: Rectangle {
++        // Popup is not an Item; keys bubble here from the focused name field.
++        Keys.onPressed: event => {
++            if (event.key === Qt.Key_Escape) { createDialog.close(); event.accepted = true; }
++        }
++
+         color: createDialog.popupColor !== "" ? createDialog.popupColor : Theme.withAlpha(Theme.surfaceContainer, 0.95)
+         radius: Theme.cornerRadius
+         border.color: Theme.withAlpha(Theme.outline, 0.15)
+diff -ruN a/components/DmsFileManagerCreateStackDialog.qml b/components/DmsFileManagerCreateStackDialog.qml
+--- a/components/DmsFileManagerCreateStackDialog.qml
++++ b/components/DmsFileManagerCreateStackDialog.qml
+@@ -16,10 +16,6 @@
+     focus: true
+     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+ 
+-    Keys.onPressed: event => {
+-        if (event.key === Qt.Key_Escape) { close(); event.accepted = true; }
+-    }
+-
+     x: parent ? Math.round((parent.width - width) / 2) : 0
+     y: parent ? Math.round((parent.height - height) / 2) : 0
+ 
+@@ -86,6 +82,11 @@
+     }
+ 
+     contentItem: Rectangle {
++        // Popup is not an Item; keys bubble here from the focused name field.
++        Keys.onPressed: event => {
++            if (event.key === Qt.Key_Escape) { createStackDialog.close(); event.accepted = true; }
++        }
++
+         color: Theme.withAlpha(Theme.surfaceContainer, 0.95)
+         radius: Theme.cornerRadius
+         border.color: Theme.withAlpha(Theme.outline, 0.15)
+diff -ruN a/components/DmsFileManagerInfoDialog.qml b/components/DmsFileManagerInfoDialog.qml
+--- a/components/DmsFileManagerInfoDialog.qml
++++ b/components/DmsFileManagerInfoDialog.qml
+@@ -16,10 +16,6 @@
+     focus: true
+     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+ 
+-    Keys.onPressed: event => {
+-        if (event.key === Qt.Key_Escape) { close(); event.accepted = true; }
+-    }
+-
+     x: parent ? Math.round((parent.width - width) / 2) : 0
+     y: parent ? Math.round((parent.height - height) / 2) : 0
+ 
+@@ -90,6 +86,12 @@
+     }
+ 
+     contentItem: Rectangle {
++        // Popup is not an Item; the content Rectangle takes the popup's focus.
++        focus: true
++        Keys.onPressed: event => {
++            if (event.key === Qt.Key_Escape) { infoDialog.close(); event.accepted = true; }
++        }
++
+         color: popupColor !== "" ? popupColor : Theme.withAlpha(Theme.surfaceContainer, 0.95)
+         radius: Theme.cornerRadius
+         border.color: Theme.withAlpha(Theme.outline, 0.15)
+diff -ruN a/components/DmsFileManagerRenameDialog.qml b/components/DmsFileManagerRenameDialog.qml
+--- a/components/DmsFileManagerRenameDialog.qml
++++ b/components/DmsFileManagerRenameDialog.qml
+@@ -14,10 +14,6 @@
+     focus: true
+     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+ 
+-    Keys.onPressed: event => {
+-        if (event.key === Qt.Key_Escape) { close(); event.accepted = true; }
+-    }
+-
+     x: parent ? Math.round((parent.width - width) / 2) : 0
+     y: parent ? Math.round((parent.height - height) / 2) : 0
+ 
+@@ -94,6 +90,11 @@
+     }
+ 
+     contentItem: Rectangle {
++        // Popup is not an Item; keys bubble here from the focused rename field.
++        Keys.onPressed: event => {
++            if (event.key === Qt.Key_Escape) { renameDialog.close(); event.accepted = true; }
++        }
++
+         color: popupColor !== "" ? popupColor : Theme.withAlpha(Theme.surfaceContainer, 0.95)
+         radius: Theme.cornerRadius
+         border.color: Theme.withAlpha(Theme.outline, 0.15)
+diff -ruN a/dms-common/DankSliderPlus.qml b/dms-common/DankSliderPlus.qml
+--- a/dms-common/DankSliderPlus.qml
++++ b/dms-common/DankSliderPlus.qml
+@@ -58,7 +58,7 @@
+         DankIcon {
+             name: slider.leftIcon
+             size: Theme.iconSize
+-            color: slider.enabled ? Theme.surfaceText : Theme.onSurface_38
++            color: slider.enabled ? Theme.surfaceText : (Theme.onSurface_38 ?? Theme.withAlpha(Theme.surfaceText, 0.38))
+             anchors.verticalCenter: parent.verticalCenter
+             visible: slider.leftIcon.length > 0
+         }
+@@ -372,7 +372,7 @@
+         DankIcon {
+             name: slider.rightIcon
+             size: Theme.iconSize
+-            color: slider.enabled ? Theme.surfaceText : Theme.onSurface_38
++            color: slider.enabled ? Theme.surfaceText : (Theme.onSurface_38 ?? Theme.withAlpha(Theme.surfaceText, 0.38))
+             anchors.verticalCenter: parent.verticalCenter
+             visible: slider.rightIcon.length > 0
+         }
+diff -ruN a/DmsFileManager.qml b/DmsFileManager.qml
+--- a/DmsFileManager.qml
++++ b/DmsFileManager.qml
+@@ -2,7 +2,7 @@
+ import QtQuick.Controls
+ import Qt.labs.folderlistmodel
+ import Qt.labs.platform as Platform
+-import Qt5Compat.GraphicalEffects
++import QtQuick.Effects
+ import Quickshell
+ import Quickshell.Widgets
+ import Quickshell.Io
+@@ -22,11 +22,27 @@
+     property bool _previewBusy: false
+ 
+     layer.enabled: true
+-    layer.effect: OpacityMask {
+-        maskSource: Rectangle {
+-            width: root.width
+-            height: root.height
++    layer.effect: MultiEffect {
++        maskEnabled: true
++        maskSource: roundedClipMask
++        maskThresholdMin: 0.5
++        maskSpreadAtMin: 1
++    }
++
++    // Qt5Compat.GraphicalEffects is not in the DMS Quickshell import path;
++    // the rounded clip uses QtQuick.Effects instead.
++    Item {
++        id: roundedClipMask
++        width: root.width
++        height: root.height
++        visible: false
++        layer.enabled: true
++        layer.smooth: true
++
++        Rectangle {
++            anchors.fill: parent
+             radius: 12
++            antialiasing: true
+         }
+     }
+ 
+@@ -145,8 +161,10 @@
+         repeat: true
+         running: true
+         onTriggered: {
++            // Re-reading bookmarks finishes in gtkBookmarksFile's loaded/
++            // loadFailed handlers, which rebuild the dropdown (drives included).
+             if (folderDropdown && (folderDropdown.visible || folderDropdown.opened))
+-                buildFolderDropdownModel();
++                gtkBookmarksFile.reload();
+         }
+     }
+ 
+@@ -292,8 +310,8 @@
+     // Session-level "no icon found" markers — avoids re-running the (slow)
+     // extraction pipeline for icon-less AppImages on every folder refresh
+     property var _extractFailedApps: ({})
+-    // One extraction at a time (same as dmsconky launcher) — parallel chains
+-    // would rm -rf each other's tmp dirs and race on cache writes
++    // One extraction at a time — keeps unsquashfs runs serialized and the
++    // pending-app bookkeeping simple
+     property bool _iconExtractBusy: false
+     property var _iconPendingApp: null
+     property string emptyColor: pluginData.emptyColor ?? "#FFEA00"
+@@ -313,7 +331,8 @@
+     }
+ 
+     function removeBookmark(filePath) {
+-        // Remove from in-memory model immediately
++        // Remove from in-memory model immediately; the file edit below
++        // rebuilds the model, restoring the entry if the removal failed.
+         var newModel = [];
+         for (var i = 0; i < root.folderDropdownModel.length; i++) {
+             var item = root.folderDropdownModel[i];
+@@ -322,17 +341,96 @@
+             }
+         }
+         root.folderDropdownModel = newModel;
+-        // Remove from GTK bookmarks file. Substring match preserves the old
+-        // sed behaviour (lines may carry a label suffix) without breaking on
+-        // "|" or quotes inside paths.
+-        var bookFile = "/home/suruibin/.config/gtk-3.0/bookmarks";
+-        var encoded = encodeURIComponent(filePath).replace(/%2F/g, "/");
+-        Proc.runCommand("removeBookmark-" + Math.random(), ["python3", "-c",
+-            "import sys;f,u=sys.argv[1:3];open(f,'w').write(''.join(l+chr(10) for l in open(f).read().splitlines() if u not in l))",
+-            bookFile, encoded], function(out, code) {
+-            if (code !== 0)
+-                ToastService.showToast(i18n("Failed to remove bookmark"), ToastService.levelError);
+-        });
++        root._editGtkBookmarks("remove", filePath);
++    }
++
++    // Edits ~/.config/gtk-3.0/bookmarks: argv = mode (add|remove), file,
++    // decoded local path. Entries match on the exact decoded URI field (the
++    // optional label is ignored); the file is read and closed before a
++    // temporary sibling atomically replaces it, preserving all other lines.
++    // Exit 0 ok, 3 bookmark not found (remove), 1 error; message on stdout.
++    readonly property string _gtkBookmarkScript: [
++        "import os, stat, sys, tempfile, urllib.parse",
++        "mode, book, target = sys.argv[1:4]",
++        "want = b'file://' + os.fsencode(target)",
++        "def matches(line):",
++        "    return urllib.parse.unquote_to_bytes(line.strip().split(b' ', 1)[0]) == want",
++        "try:",
++        "    book = os.path.realpath(book)",
++        "    try:",
++        "        with open(book, 'rb') as f:",
++        "            data = f.read()",
++        "        bits = stat.S_IMODE(os.stat(book).st_mode)",
++        "    except FileNotFoundError:",
++        "        if mode == 'remove':",
++        "            print('bookmark not found'); sys.exit(3)",
++        "        data, bits = b'', 0o644",
++        "    lines = data.split(b'\\n')",
++        "    if mode == 'remove':",
++        "        kept = [l for l in lines if not matches(l)]",
++        "        if len(kept) == len(lines):",
++        "            print('bookmark not found'); sys.exit(3)",
++        "        out = b'\\n'.join(kept)",
++        "    else:",
++        "        if any(matches(l) for l in lines):",
++        "            sys.exit(0)",
++        "        uri = b'file://' + urllib.parse.quote_from_bytes(os.fsencode(target), safe='/').encode()",
++        "        out = data + (b'\\n' if data and not data.endswith(b'\\n') else b'') + uri + b'\\n'",
++        "    d = os.path.dirname(book)",
++        "    os.makedirs(d, exist_ok=True)",
++        "    fd, tmp = tempfile.mkstemp(dir=d, prefix='.bookmarks.')",
++        "    try:",
++        "        with os.fdopen(fd, 'wb') as f:",
++        "            f.write(out); f.flush(); os.fsync(f.fileno())",
++        "        os.chmod(tmp, bits)",
++        "        os.replace(tmp, book)",
++        "    except BaseException:",
++        "        os.unlink(tmp); raise",
++        "except OSError as e:",
++        "    print(e.strerror or e, e.filename or ''); sys.exit(1)"
++    ].join("\n")
++
++    // GTK bookmarks (system file manager favorites), read through FileView;
++    // QML XHR cannot read local files.
++    readonly property string _gtkBookmarksPath: decodeURIComponent(Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")) + "/.config/gtk-3.0/bookmarks"
++    property string _gtkBookmarksText: ""
++
++    FileView {
++        id: gtkBookmarksFile
++        path: root._gtkBookmarksPath
++        watchChanges: true
++        // A missing bookmarks file just means "no bookmarks"; other failures
++        // are reported in onLoadFailed.
++        printErrors: false
++        onFileChanged: reload()
++        onLoaded: {
++            root._gtkBookmarksText = text();
++            root.buildFolderDropdownModel();
++        }
++        onLoadFailed: error => {
++            if (error !== FileViewError.FileNotFound)
++                console.warn("DmsFileManager: cannot read " + path + ": " + FileViewError.toString(error));
++            root._gtkBookmarksText = "";
++            root.buildFolderDropdownModel();
++        }
++    }
++
++    function _editGtkBookmarks(mode, filePath) {
++        var bookFile = root._gtkBookmarksPath;
++        Proc.runCommand("gtkBookmark-" + Math.random(), ["python3", "-c", root._gtkBookmarkScript, mode, bookFile, filePath], function(out, code) {
++            if (code !== 0) {
++                var err = String(out || "").trim();
++                if (err.length > 120) err = err.substring(0, 120) + "…";
++                ToastService.showToast((mode === "remove" ? i18n("Failed to remove bookmark") : i18n("Failed to add bookmark")) + (err ? ": " + err : ""), ToastService.levelError);
++            }
++            // Reload rebuilds the dropdown from the edited file.
++            gtkBookmarksFile.reload();
++        }, 0, Proc.noTimeout);
++    }
++
++    // Absolute path of a script shipped next to this file
++    function _pluginScript(name) {
++        return decodeURIComponent(root._cleanPath(Qt.resolvedUrl(name)));
+     }
+ 
+     // Inline rename state: file path of the item currently renamed in place
+@@ -370,7 +468,7 @@
+     }
+ 
+     Shortcut {
+-        sequence: StandardKey.Copy
++        sequences: [StandardKey.Copy]
+         onActivated: {
+             if (root.selectedFilePaths.length > 0) {
+                 root.copiedFilePaths = root.selectedFilePaths.slice();
+@@ -380,7 +478,7 @@
+         }
+     }
+     Shortcut {
+-        sequence: StandardKey.Cut
++        sequences: [StandardKey.Cut]
+         onActivated: {
+             if (root.selectedFilePaths.length > 0) {
+                 root.copiedFilePaths = root.selectedFilePaths.slice();
+@@ -390,7 +488,7 @@
+         }
+     }
+     Shortcut {
+-        sequence: StandardKey.Paste
++        sequences: [StandardKey.Paste]
+         onActivated: {
+             if (root.copiedFilePaths.length > 0) {
+                 var dest = root._cleanPath(root.targetFolderUrl);
+@@ -422,7 +520,8 @@
+         onActivated: {
+             if (root.selectedFilePaths.length > 0) {
+                 if (root.folderType === "trash") {
+-                    root.deleteFromTrashPermanently(root.selectedFilePaths[0]);
++                    // Permanent deletion stays an explicit trash-menu action.
++                    ToastService.showToast(i18n("Use the trash menu to delete permanently"), ToastService.levelInfo);
+                 } else {
+                     const paths = root.selectedFilePaths.slice();
+                     root.clearSelection();
+@@ -627,6 +726,11 @@
+                 return;
+             }
+ 
++            if (newName === "." || newName === ".." || newName.indexOf("\0") !== -1) {
++                ToastService.showToast(i18n("Rename failed") + ": " + i18n("Invalid name"), ToastService.levelError);
++                return;
++            }
++
+             pathStr = root._cleanPath(pathStr);
+             if (!pathStr || pathStr.length === 0)
+                 return;
+@@ -634,11 +738,15 @@
+             const parts = pathStr.split("/");
+             parts.pop();
+             const newPath = parts.join("/") + "/" + newName;
++            // paste.py --rename renames to this exact entry without replacing
++            // anything; an existing name (file, directory or dangling link)
++            // fails with a one-line reason as its last output line.
+             Proc.runCommand("rename-" + Math.random(), ["sh", "-c",
+-                "mv " + _shellQuote(pathStr) + " " + _shellQuote(newPath) + " 2>&1"
++                'exec "$1" --rename "$2" "$3" 2>&1', "sh", root._pluginScript("paste.py"), pathStr, newPath
+             ], function(out, code) {
+                 if (code !== 0) {
+-                    var err = out && out.trim() ? out.trim() : "";
++                    var lines = String(out || "").trim().split("\n");
++                    var err = lines[lines.length - 1].trim();
+                     if (err.length > 120) err = err.substring(0, 120) + "…";
+                     ToastService.showToast(i18n("Rename failed") + (err ? ": " + err : ""), ToastService.levelError);
+                 }
+@@ -665,12 +773,10 @@
+         return root._modelEntryByPath(path) !== null;
+     }
+ 
+-    // ── Trash with permission fallback ─────────────────────────────────────
+-    // Trash the given paths with a single gio call. On permission failure
+-    // (root-owned entries), retries permanently via polkit — the system
+-    // password prompt appears and the delete runs as root.
++    // ── Trash ──────────────────────────────────────────────────────────────
++    // Trash the given paths with a single gio call; failures are reported
++    // and never escalated to a privileged permanent delete.
+     property var _pendingTrashPaths: []
+-    property var _elevatedDeletePaths: []
+ 
+     function trashPaths(paths) {
+         const clean = paths.map(p => root._cleanPath(p));
+@@ -846,9 +952,14 @@
+     }
+ 
+     function launchDesktopFile(path) {
+-        let cleanPath = root._cleanPath(path);
+-        let shellCmd = 'cmd=$(grep -m 1 "^Exec=" "' + cleanPath + '" | cut -d= -f2- | sed "s/%[fFuUiIcDkKvV]//g"); exec sh -c "$cmd"';
+-        Quickshell.execDetached(["sh", "-c", shellCmd]);
++        // Launch only executable (trusted) desktop files; the path stays a
++        // positional argument and gio parses Exec= per the desktop entry spec.
++        Proc.runCommand(null, ["sh", "-c", 'test -x "$1" || exit 3; exec gio launch "$1"', "sh", root._cleanPath(path)], function(out, code) {
++            if (code === 3)
++                ToastService.showToast(i18n("Desktop file is not executable; mark it executable to launch it"), ToastService.levelWarn);
++            else if (code !== 0)
++                ToastService.showToast(i18n("Failed to open file") + (out && out.trim() ? ": " + out.trim().substring(0, 120) : ""), ToastService.levelError);
++        }, 0, Proc.noTimeout);
+     }
+ 
+     // Folder navigation
+@@ -962,18 +1073,7 @@
+     }
+ 
+     function addToGtkBookmarks(filePath) {
+-        var cleanPath = root._cleanPath(String(filePath));
+-        var uri = "file://" + cleanPath;
+-        var name = cleanPath.split("/").pop();
+-        var line = uri + " " + name;
+-
+-        var bookmarksFile = "\"$HOME/.config/gtk-3.0/bookmarks\"";
+-
+-        Proc.runCommand("addBookmark-" + Math.random(), ["sh", "-c",
+-            "grep -qxF " + _shellQuote(line) + " " + bookmarksFile + " || echo " + _shellQuote(line) + " >> " + bookmarksFile],
+-            function(out, code) {
+-                root.buildFolderDropdownModel();
+-            });
++        root._editGtkBookmarks("add", root._cleanPath(String(filePath)));
+     }
+ 
+     function pasteFromClipboard() {
+@@ -997,7 +1097,7 @@
+             ToastService.showToast(i18n("Paste in progress"), ToastService.levelInfo);
+             return;
+         }
+-        let scriptPath = decodeURIComponent(root._cleanPath(Qt.resolvedUrl("paste.py")));
++        let scriptPath = root._pluginScript("paste.py");
+         root.pasteActive = true;
+         root.pastePhase = "running";
+         root.pasteCurrentName = "";
+@@ -1048,7 +1148,9 @@
+         for (var i = 0; i < ops.length; i++) {
+             var op = ops[i];
+             if (!overwrite && op.conflict) continue;
+-            args.push(op.isCut ? "move" : "copy");
++            // Plain verbs never replace an existing entry; "-replace" is the
++            // user-approved overwrite of a conflict found during preflight.
++            args.push((op.isCut ? "move" : "copy") + (overwrite && op.conflict ? "-replace" : ""));
+             args.push(op.src);
+             args.push(op.dest);
+             any = true;
+@@ -1085,12 +1187,13 @@
+ 
+     function _checkPasteConflicts(ops) {
+         var checks = ops.map(function(o) {
+-            return "test -e " + _shellQuote(o.dest) + " && echo 1 || echo 0";
++            return "{ [ -e " + _shellQuote(o.dest) + " ] || [ -L " + _shellQuote(o.dest) + " ]; } && echo 1 || echo 0";
+         }).join("; ");
+         Proc.runCommand("pasteCheck-" + Math.random(), ["sh", "-c", checks], function(out, code) {
+             if (code !== 0 || !out) {
+-                // Can't check — proceed without overwrite prompt
+-                root._executePaste(ops, true);
++                // Can't check — proceed without replacing; the backend still
++                // refuses to overwrite existing entries.
++                root._executePaste(ops, false);
+                 return;
+             }
+             var lines = String(out).trim().split("\n");
+@@ -1900,37 +2003,32 @@
+         stdPaths[homePath + "/Videos"] = true;
+         stdPaths[homePath + "/Documents"] = true;
+ 
+-        // Read GTK bookmarks (system file manager favorites)
++        // GTK bookmarks (system file manager favorites), loaded by gtkBookmarksFile
+         var bookmarkItems = [];
+-        try {
+-            var bkUrl = homeUrl;
+-            if (bkUrl.charAt(bkUrl.length - 1) !== "/") bkUrl += "/";
+-            bkUrl += ".config/gtk-3.0/bookmarks";
+-            var xhr = new XMLHttpRequest();
+-            xhr.open("GET", bkUrl, false);
+-            xhr.send();
+-            if (xhr.status === 0 || xhr.status === 200) {
+-                var lines = xhr.responseText.split("\n");
+-                for (var bi = 0; bi < lines.length; bi++) {
+-                    var line = String(lines[bi]).trim();
+-                    if (line === "") continue;
+-                    // Format: "file:///path optional_label"
+-                    var spaceIdx = line.indexOf(" ");
+-                    var uri = spaceIdx >= 0 ? line.substring(0, spaceIdx) : line;
+-                    var label = spaceIdx >= 0 ? line.substring(spaceIdx + 1).trim() : "";
+-                    var filePath = decodeURIComponent(uri);
+-                    if (filePath.indexOf("file://") === 0) filePath = filePath.substring(7);
+-
+-                    // Skip if matches a standard path
+-                    if (stdPaths[filePath] !== undefined) continue;
+-                    // Skip home root or empty
+-                    if (filePath === "" || filePath === homePath) continue;
+-
+-                    var displayName = label || filePath.split("/").filter(function(s) { return s !== ""; }).pop() || filePath;
+-                    bookmarkItems.push({ label: displayName, value: "bookmark", icon: "bookmark", path: filePath });
+-                }
++        var lines = root._gtkBookmarksText.split("\n");
++        for (var bi = 0; bi < lines.length; bi++) {
++            var line = String(lines[bi]).trim();
++            if (line === "") continue;
++            // Format: "file:///path optional_label"
++            var spaceIdx = line.indexOf(" ");
++            var uri = spaceIdx >= 0 ? line.substring(0, spaceIdx) : line;
++            var label = spaceIdx >= 0 ? line.substring(spaceIdx + 1).trim() : "";
++            var filePath;
++            try {
++                filePath = decodeURIComponent(uri);
++            } catch (e) {
++                continue; // malformed percent-encoding: not a usable bookmark
+             }
+-        } catch (e) {}
++            if (filePath.indexOf("file://") === 0) filePath = filePath.substring(7);
++
++            // Skip if matches a standard path
++            if (stdPaths[filePath] !== undefined) continue;
++            // Skip home root or empty
++            if (filePath === "" || filePath === homePath) continue;
++
++            var displayName = label || filePath.split("/").filter(function(s) { return s !== ""; }).pop() || filePath;
++            bookmarkItems.push({ label: displayName, value: "bookmark", icon: "bookmark", path: filePath });
++        }
+ 
+         // Add bookmarks section
+         if (bookmarkItems.length > 0) {
+@@ -2647,7 +2745,9 @@
+                 anchors.right: settingsBox.left
+                 anchors.rightMargin: Theme.spacingS
+                 anchors.top: parent.top
+-                width: Math.max(childrenRect.width, 60)
++                // Size from the Row's content, not childrenRect: the Row is
++                // right-anchored, so childrenRect depends on this width.
++                width: Math.max(headerControlsRow.implicitWidth, 60)
+                 height: 24
+                 visible: root.showHeader
+                 z: 10
+@@ -2665,6 +2765,7 @@
+                 ]
+ 
+                 Row {
++                    id: headerControlsRow
+                     anchors.right: parent.right
+                     anchors.verticalCenter: parent.verticalCenter
+                     spacing: Theme.spacingS
+@@ -2813,12 +2914,8 @@
+                         hoverEnabled: true
+                         cursorShape: Qt.PointingHandCursor
+                         onClicked: {
+-                            var dir = String(root.targetFolderUrl);
+-                            if (dir.startsWith("file://"))
+-                                dir = dir.substring(7);
+-                            if (dir.startsWith("localhost/"))
+-                                dir = dir.substring(9);
+-                            Quickshell.execDetached(["xdg-terminal-exec", "--dir=" + dir]);
++                            const dir = decodeURIComponent(root._cleanPath(root.targetFolderUrl));
++                            Quickshell.execDetached(["alacritty", "--working-directory", dir]);
+                         }
+ 
+                         DankIcon {
+@@ -3858,7 +3955,8 @@
+                         {
+                             text: i18n("Float File"),
+                             icon: "picture_in_picture",
+-                            visible: root.selectedFilePaths.length === 1 && (root.isImage(quickMenu.currentName) || quickMenu.currentName.toLowerCase().endsWith(".pdf")),
++                            // Needs the separate "floaty" DMS IPC target, which is not installed.
++                            visible: false,
+                             action: function() {
+                                 quickMenu.close();
+                                 const path = root.selectedFilePaths[0];
+@@ -3893,10 +3991,9 @@
+                                 // intercepts and re-serves the entry, corrupting the content.
+                                 let uris = [];
+                                 for (let path of paths) {
+-                                    uris.push("file://" + path);
++                                    uris.push("file://" + path.split("/").map(encodeURIComponent).join("/"));
+                                 }
+-                                const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
+-                                Quickshell.execDetached(["bash", "-c", cmd]);
++                                Quickshell.execDetached(["wl-copy", "-t", "x-special/gnome-copied-files", "copy\n" + uris.join("\n")]);
+ 
+                                 const label = paths.length > 1
+                                     ? i18n("Copied %1 items").arg(paths.length)
+@@ -4415,7 +4512,6 @@
+                 Row {
+                     width: parent.width
+                     height: 24
+-                    visible: !isSeparator
+                     anchors.right: parent.right
+ 
+                     StyledText {
+@@ -5287,6 +5383,14 @@
+             id: appIconExtractCollector
+             onStreamFinished: root._handleAppIconExtracted(appIconExtractCollector.text)
+         }
++        stderr: StdioCollector {
++            id: appIconExtractErrCollector
++            onStreamFinished: {
++                const err = appIconExtractErrCollector.text.trim();
++                if (err !== "")
++                    console.warn("appimage_icon.py:", err);
++            }
++        }
+     }
+ 
+     // Available-space lookup: mountpoint -> free bytes (populated by dfProc)
+@@ -5343,8 +5447,7 @@
+         }
+     }
+ 
+-    // gio trash runner — reports failures as toast, escalates permission
+-    // errors to a polkit-elevated permanent delete
++    // gio trash runner — reports failures as toast
+     Process {
+         id: trashProc
+         stdout: StdioCollector {}
+@@ -5358,42 +5461,9 @@
+                 return;
+             }
+             var err = trashErrCollector.text.trim();
+-            if (/Permission denied|Operation not permitted|Access denied/i.test(err)) {
+-                root._elevatedDeletePaths = paths;
+-                // NoNewPrivs sessions (niri --session hardening) break setuid
+-                // pkexec. Ask the root systemd manager to run the delete —
+-                // polkit still gates it, no setuid involved anywhere.
+-                pkexecDelProc.command = ["systemd-run", "--system", "--collect",
+-                    "--unit=dms-elevdel-" + Math.random().toString(36).slice(2, 8),
+-                    "rm", "-rf", "--"].concat(paths);
+-                pkexecDelProc.running = true;
+-            } else {
+-                if (err.length > 140) err = err.substring(0, 140) + "…";
+-                ToastService.showToast(i18n("Move to Trash failed") + (err ? ": " + err : ""), ToastService.levelError);
+-            }
+-        }
+-    }
+-
+-    // Elevated permanent delete fallback (password prompt via polkit)
+-    Process {
+-        id: pkexecDelProc
+-        stdout: StdioCollector {}
+-        stderr: StdioCollector { id: pkDelErrCollector }
+-        onExited: function(exitCode, exitStatus) {
+-            root._elevatedDeletePaths = [];
+-            if (exitCode === 0) {
+-                ToastService.showToast(i18n("Deleted with administrator privileges"), ToastService.levelInfo);
+-                return;
+-            }
+-            var err = pkDelErrCollector.text.trim();
+-            if (/not authorized|access denied|authentication required/i.test(err)) {
+-                ToastService.showToast(i18n("Authentication failed or cancelled"), ToastService.levelInfo);
+-            } else if (/agent/i.test(err)) {
+-                ToastService.showToast(i18n("No polkit authentication agent, use sudo in a terminal"), ToastService.levelError);
+-            } else {
+-                if (err.length > 140) err = err.substring(0, 140) + "…";
+-                ToastService.showToast(i18n("Delete failed") + (err ? ": " + err : ""), ToastService.levelError);
+-            }
++            // No automatic privilege escalation: a failed trash stays a failure.
++            if (err.length > 140) err = err.substring(0, 140) + "…";
++            ToastService.showToast(i18n("Move to Trash failed") + (err ? ": " + err : ""), ToastService.levelError);
+         }
+     }
+ 
+@@ -6093,7 +6163,10 @@
+ 
+                 MediaPlayer {
+                     id: mediaPlayer
+-                    source: "file://" + previewPopup.filePath
++                    // Only a selected video file is a real media source; the
++                    // bare "file://" at creation (empty filePath) or an image/
++                    // text path made FFmpeg log "Could not open media".
++                    source: previewPopup.isVideo && previewPopup.filePath !== "" ? "file://" + previewPopup.filePath : ""
+                     videoOutput: videoOutput
+                     audioOutput: AudioOutput { }
+                     autoPlay: true
+@@ -6400,6 +6473,18 @@
+         }
+     }
+ 
++    // Cache stem for an AppImage: lowercased name without version/arch
++    function _appImageStem(matchBase) {
++        return matchBase.replace(/[-_]\d+([-_.]\d+)*[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
++            .replace(/[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
++            .replace(/[-_]\d+([-_.]\d+)*[-_]linux[-_](amd64|x86_64)$/, "")
++            .replace(/[-_]linux[-_](amd64|x86_64)$/, "")
++            .replace(/[-_]linux-(amd64|x86_64)$/, "")
++            .replace(/[-_]\d+([-_.]\d+)*([-_][a-z]*\d*)?$/i, "")
++            .replace(/(\.v?\d+([-_.]\d+)*([-_.][a-z]+\d*)?)$/i, "")
++            .replace(/[-_](fixed|stable|beta|alpha|rc|patch|debug|release|final|portable|setup|linux)$/i, "");
++    }
++
+     function _extractMissingIcons() {
+         if (root._iconExtractBusy) return;
+         let next = null;
+@@ -6411,14 +6496,7 @@
+             let _matchBase = item.fileName.replace(/\.AppImage$/i, "").toLowerCase();
+             // check global cache
+             if (_cachedAppIcons[_matchBase]) continue;
+-            let clean = _matchBase.replace(/[-_]\d+([-_.]\d+)*[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
+-                .replace(/[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
+-                .replace(/[-_]\d+([-_.]\d+)*[-_]linux[-_](amd64|x86_64)$/, "")
+-                .replace(/[-_]linux[-_](amd64|x86_64)$/, "")
+-                .replace(/[-_]linux-(amd64|x86_64)$/, "")
+-                .replace(/[-_]\d+([-_.]\d+)*([-_][a-z]*\d*)?$/i, "")
+-                .replace(/(\.v?\d+([-_.]\d+)*([-_.][a-z]+\d*)?)$/i, "")
+-                .replace(/[-_](fixed|stable|beta|alpha|rc|patch|debug|release|final|portable|setup|linux)$/i, "");
++            let clean = root._appImageStem(_matchBase);
+             if (clean && _cachedAppIcons[clean]) continue;
+             next = { name: item.fileName, appName: clean || _matchBase, path: item.filePath };
+             break;
+@@ -6428,72 +6506,19 @@
+         root._extractOne(next);
+     }
+ 
++    // Reads the icon statically out of the AppImage's SquashFS image
++    // (appimage_icon.py + unsquashfs); the AppImage itself is never run.
+     function _extractOne(app) {
+-        let appPath = root._cleanPath(app.path);
+-        // extract using simplified name (no version/arch)
+-        let rawName = app.appName;
+-        let cleanName = rawName.replace(/[-_]\d+([-_.]\d+)*[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
+-            .replace(/[-_](x86_64|amd64|aarch64|arm64|i686)$/, "")
+-            .replace(/[-_]\d+([-_.]\d+)*[-_]linux[-_](amd64|x86_64)$/, "")
+-            .replace(/[-_]linux[-_](amd64|x86_64)$/, "")
+-            .replace(/[-_]linux-(amd64|x86_64)$/, "")
+-            .replace(/[-_]\d+([-_.]\d+)*([-_][a-z]*\d*)?$/i, "")
+-            .replace(/(\.v?\d+([-_.]\d+)*([-_.][a-z]+\d*)?)$/i, "")
+-            .replace(/[-_](fixed|stable|beta|alpha|rc|patch|debug|release|final|portable|setup|linux)$/i, "");
+-        let qPath = _shellQuote(appPath);
+-        let qDir = _shellQuote(root._appIconCacheDir);
+-        let qTmp = _shellQuote(root._appIconCacheDir + "/tmp-" + cleanName);
+-        let qOut = _shellQuote(root._appIconCacheDir + "/" + cleanName);
+-
+-        // Staged pattern extraction (same strategy as dmsconky launcher):
+-        // each stage pulls only icon-sized KBs instead of unpacking the whole
+-        // squashfs. png → svg → .DirIcon → usr/share/{icons,pixmaps} → full.
+-        let script = "mkdir -p " + qDir + " && " +
+-            "rm -rf " + qTmp + " && mkdir -p " + qTmp + " && " +
+-            "cd " + qTmp + " && " +
+-            // NB: hardcode "timeout 45" (no $T indirection) — IFS is narrowed
+-            // to newline below, which would stop $T from word-splitting
+-            "FOUND_ICON=0; IFS='\n'; " +
+-            // stage 1: root-level pngs (new runtimes symlink them here), largest first
+-            "timeout 45 " + qPath + " --appimage-extract '*.png' >/dev/null 2>&1; " +
+-            "for icon in $(find squashfs-root -xtype f -name '*.png' -printf '%s\\t%p\\n' 2>/dev/null | sort -rn | head -3 | cut -f2-); do " +
+-            "REAL_FILE=$(readlink -f \"$icon\" 2>/dev/null || echo \"$icon\"); " +
+-            "if [ -f \"$REAL_FILE\" ]; then cp \"$REAL_FILE\" " + qOut + ".png 2>/dev/null && FOUND_ICON=1 && break; fi; done; " +
+-            // stage 2: svg
+-            "if [ \"$FOUND_ICON\" = 0 ]; then rm -rf squashfs-root; " +
+-            "timeout 45 " + qPath + " --appimage-extract '*.svg' >/dev/null 2>&1; " +
+-            "for icon in $(find squashfs-root -xtype f -name '*.svg' -printf '%s\\t%p\\n' 2>/dev/null | sort -rn | head -3 | cut -f2-); do " +
+-            "REAL_FILE=$(readlink -f \"$icon\" 2>/dev/null || echo \"$icon\"); " +
+-            "if [ -f \"$REAL_FILE\" ]; then cp \"$REAL_FILE\" " + qOut + ".svg 2>/dev/null && FOUND_ICON=1 && break; fi; done; fi; " +
+-            // stage 3: .DirIcon (follows to the real icon; keep its own extension)
+-            "if [ \"$FOUND_ICON\" = 0 ]; then rm -rf squashfs-root; " +
+-            "timeout 45 " + qPath + " --appimage-extract '.DirIcon' >/dev/null 2>&1; " +
+-            "if [ -e squashfs-root/.DirIcon ]; then " +
+-            "REAL_FILE=$(readlink -f squashfs-root/.DirIcon 2>/dev/null || echo squashfs-root/.DirIcon); " +
+-            "if case \"$REAL_FILE\" in squashfs-root/*) [ -f \"$REAL_FILE\" ] ;; *) false ;; esac; then " +
+-            "EXT=\"${REAL_FILE##*.}\"; case \"$EXT\" in png|svg|jpg|jpeg|ico|xpm) ;; *) EXT=png ;; esac; " +
+-            "cp \"$REAL_FILE\" " + qOut + ".$EXT 2>/dev/null && FOUND_ICON=1; fi; fi; fi; " +
+-            // stage 4: standard icon dirs (accumulate into same squashfs-root)
+-            "if [ \"$FOUND_ICON\" = 0 ]; then " +
+-            "timeout 45 " + qPath + " --appimage-extract 'usr/share/icons/*' >/dev/null 2>&1; " +
+-            "timeout 45 " + qPath + " --appimage-extract 'usr/share/pixmaps/*' >/dev/null 2>&1; " +
+-            "for icon in $(find squashfs-root -xtype f \\( -name '*.png' -o -name '*.svg' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.ico' -o -name '*.xpm' \\) -printf '%s\\t%p\\n' 2>/dev/null | sort -rn | head -3 | cut -f2-); do " +
+-            "REAL_FILE=$(readlink -f \"$icon\" 2>/dev/null || echo \"$icon\"); " +
+-            "if [ -f \"$REAL_FILE\" ]; then EXT=\"${REAL_FILE##*.}\"; case \"$EXT\" in png|svg|jpg|jpeg|ico|xpm) ;; *) EXT=png ;; esac; " +
+-            "cp \"$REAL_FILE\" " + qOut + ".$EXT 2>/dev/null && FOUND_ICON=1 && break; fi; done; fi; " +
+-            // stage 5: full extract — exotic layouts, last resort
+-            "if [ \"$FOUND_ICON\" = 0 ]; then rm -rf squashfs-root; " +
+-            "timeout 45 " + qPath + " --appimage-extract >/dev/null 2>&1; " +
+-            "for icon in $(find squashfs-root -xtype f \\( -name '.DirIcon' -o -name '*.png' -o -name '*.svg' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.ico' -o -name '*.xpm' \\) -printf '%s\\t%p\\n' 2>/dev/null | sort -rn | head -3 | cut -f2-); do " +
+-            "REAL_FILE=$(readlink -f \"$icon\" 2>/dev/null || echo \"$icon\"); " +
+-            "if [ -f \"$REAL_FILE\" ]; then EXT=\"${REAL_FILE##*.}\"; case \"$EXT\" in png|svg|jpg|jpeg|ico|xpm) ;; *) EXT=png ;; esac; " +
+-            "cp \"$REAL_FILE\" " + qOut + ".$EXT 2>/dev/null && FOUND_ICON=1 && break; fi; done; fi; " +
+-            "rm -rf " + qTmp + "; " +
+-            // glob must stay unquoted to expand; RESULT echo for the callback
+-            "R=$(ls -1 " + qOut + ".* 2>/dev/null | head -1); " +
+-            "if [ -n \"$R\" ]; then echo \"$R\"; else echo '0'; fi";
++        // The stem becomes a cache file name: a single plain basename only
++        if (!/^[^\/\x00-\x1f\x7f.][^\/\x00-\x1f\x7f]{0,127}$/.test(app.appName)) {
++            root._iconExtractBusy = false;
++            root._extractFailedApps[app.name] = true;
++            Qt.callLater(root._extractMissingIcons);
++            return;
++        }
+         root._iconPendingApp = app;
+-        appIconExtractProc.command = ["sh", "-c", script];
++        appIconExtractProc.command = ["python3", root._pluginScript("appimage_icon.py"),
++            root._cleanPath(app.path), root._appIconCacheDir, app.appName];
+         appIconExtractProc.running = true;
+     }
+ 
+diff -ruN a/paste.py b/paste.py
+--- a/paste.py
++++ b/paste.py
+@@ -1,211 +1,650 @@
+ #!/usr/bin/env python3
+-import sys
+-import subprocess
+-import urllib.parse
+-import shutil
++"""Copy / move / rename backend of the file manager.
++
++Destination entries are only ever created exclusively (O_EXCL, mkdir, symlink,
++renameat2(RENAME_NOREPLACE)). The single exception is a replacement the user
++explicitly approved ("copy-replace"/"move-replace"): the new content is staged
++in a temporary sibling and published with an atomic rename. An existing
++destination entry is therefore never opened for writing, so destination
++symlinks and hard-linked aliases are never followed or truncated.
++"""
++import ctypes
++import datetime
++import errno
++import functools
+ import os
++import secrets
++import signal
++import stat
++import subprocess
++import sys
+ import time
+-import datetime
++import urllib.parse
+ 
+ CHUNK = 1024 * 1024  # 1 MiB per read/write
+ REPORT_INTERVAL = 0.15  # seconds between progress lines
+ 
+ # Progress protocol on stdout (tab-separated, one line each):
+-#   A\t<action>               overall action of this run: copy or move
+-#   T\t<total>                total bytes to transfer (after pre-scan)
++#   A\t<action>                 overall action of this run: copy or move
++#   T\t<total>                  total bytes to transfer (after pre-scan)
+ #   P\t<done>\t<total>\t<name>  progress; <name> is the current item
+-#   E\t<path>                 one item failed
+-#   S\t<ok>\t<fail>           final summary
+-_state = {"done": 0, "total": 0, "current": "", "last_t": 0.0}
++#   E\t<path>\t<message>        one item failed
++#   S\t<ok>\t<fail>             final summary
++_state = {"done": 0, "total": 0, "current": "", "last_t": 0.0, "quiet": False}
++
++# --ops verbs -> (action, replace). Plain verbs never replace an existing entry;
++# the -replace verbs carry the user's approval to replace the destination entry.
++OPS_VERBS = {
++    "copy": ("copy", False),
++    "move": ("move", False),
++    "copy-replace": ("copy", True),
++    "move-replace": ("move", True),
++}
++
++_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC
++_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
++# Metadata (mode, times, xattrs) is best effort like cp -a: FAT/exFAT/NTFS
++# mounts and foreign owners reject it with these errors.
++_SOFT_META_ERRNOS = frozenset((errno.EPERM, errno.EACCES, errno.ENOTSUP, errno.EOPNOTSUPP,
++                               errno.EINVAL, errno.ENOSYS, errno.ENODATA))
++# renameat2 errors meaning RENAME_NOREPLACE is unavailable (old kernel/libc, NFS, some FUSE).
++_NO_RENAME_FLAG_ERRNOS = frozenset((errno.EINVAL, errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP))
++# link errors meaning hard links are unavailable or not permitted here.
++_NO_LINK_ERRNOS = frozenset((errno.EXDEV, errno.EPERM, errno.EMLINK, errno.ENOTSUP,
++                             errno.EOPNOTSUPP, errno.ENOSYS))
++
++_AT_FDCWD = -100
++_RENAME_NOREPLACE = 1
++try:
++    _renameat2 = ctypes.CDLL(None, use_errno=True).renameat2
++except (OSError, AttributeError):  # libc without renameat2 (< glibc 2.28)
++    _renameat2 = None
++else:
++    _renameat2.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
++    _renameat2.restype = ctypes.c_int
++
++
++class TransferError(Exception):
++    """A refused or failed operation; str() is the user-facing message."""
++
++
++class Cancelled(BaseException):
++    """SIGTERM from the UI's cancel; unwinds through the cleanup handlers."""
++
++
++def _on_sigterm(signum, frame):
++    raise Cancelled()
++
++
++_CONTROL_CHARS = {c: " " for c in list(range(32)) + [127]}
++
++
++def _clean(text):
++    """One protocol field: tabs/newlines in file names must not forge lines."""
++    return str(text).translate(_CONTROL_CHARS)
+ 
+ 
+-def emit(line):
+-    sys.stdout.write(line + "\n")
++def emit(*fields):
++    sys.stdout.write("\t".join(_clean(f) for f in fields) + "\n")
+     sys.stdout.flush()
+ 
+ 
++def _warn(message):
++    sys.stderr.write(_clean(message) + "\n")
++    sys.stderr.flush()
++
++
+ def report(force=False):
++    if _state["quiet"]:
++        return
+     now = time.monotonic()
+     if force or now - _state["last_t"] >= REPORT_INTERVAL:
+         _state["last_t"] = now
+-        emit("P\t%d\t%d\t%s" % (_state["done"], _state["total"], _state["current"]))
++        emit("P", _state["done"], _state["total"], _state["current"])
+ 
+ 
+-def uri_to_path(line):
+-    """Turn a single clipboard/drop line into a local filesystem path, or None."""
+-    line = line.strip()
+-    if not line:
++def _err_text(e):
++    if isinstance(e, FileExistsError) and e.filename is not None and e.filename2 is None:
++        return _clean("'%s' already exists" % os.path.basename(e.filename))
++    if isinstance(e, OSError):
++        message = e.strerror or str(e)
++        names = [n for n in (e.filename, e.filename2) if n is not None]
++        if names:
++            message += ": " + " -> ".join("'%s'" % n for n in names)
++        return _clean(message)
++    return _clean(e)
++
++
++def _exists(path):
++    return TransferError("'%s' already exists" % os.path.basename(path))
++
++
++def _ident(st):
++    return (st.st_dev, st.st_ino)
++
++
++def _lstat(path):
++    try:
++        return os.lstat(path)
++    except FileNotFoundError:
+         return None
+-    if line.startswith("file://"):
+-        line = line[7:]
+-    if line.startswith("localhost/"):
+-        line = line[9:]
+-    decoded = urllib.parse.unquote(line)
+-    return decoded if os.path.exists(decoded) else None
+ 
+ 
+-def tree_size(path):
+-    """Total byte size of a file or directory tree (symlinks count as 0)."""
++def _lstat_at(dir_fd, name):
++    try:
++        return os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
++    except FileNotFoundError:
++        return None
++
++
++def _is_within(path, root):
++    return os.path.commonpath([path, root]) == root
++
++
++def _entry_key(path):
++    """Canonical name of the directory entry: parent resolved, last component kept."""
++    return os.path.join(os.path.realpath(os.path.dirname(path) or "."), os.path.basename(path))
++
++
++def _check_name(path):
++    name = os.path.basename(path)
++    if name in ("", ".", ".."):
++        raise TransferError("'%s' is not a valid file name" % (name or path))
++    return name
++
++
++def _is_noop(src, dest):
++    """True when an existing dest already names the same file as src (pasting
++    onto itself). Stat failures only mean "not provably the same"; the job
++    itself then reports them."""
++    if not os.path.lexists(dest):
++        return False
++    if os.path.realpath(src) == os.path.realpath(dest):
++        return True
+     try:
+-        if os.path.islink(path):
+-            return 0
+-        if os.path.isfile(path):
+-            return os.path.getsize(path)
+-        total = 0
+-        for root, dirs, files in os.walk(path):
++        return os.path.samestat(os.lstat(src), os.lstat(dest))
++    except OSError:
++        return False
++
++
++def _check_replace(s_st, d_st, name):
++    """Refuse replacements that would change an entry's kind or merge through a link."""
++    if stat.S_ISDIR(s_st.st_mode):
++        if stat.S_ISLNK(d_st.st_mode):
++            raise TransferError("'%s' is a symbolic link; refusing to merge a folder through it" % name)
++        if not stat.S_ISDIR(d_st.st_mode):
++            raise TransferError("'%s' exists and is not a folder" % name)
++    elif stat.S_ISDIR(d_st.st_mode):
++        raise TransferError("'%s' is a folder; refusing to replace it with a file" % name)
++
++
++def tree_size(path):
++    """Progress estimate: bytes of regular files under path, links not followed.
++    Unreadable entries count as 0 here; the transfer itself reports them."""
++    st = _lstat(path)
++    if st is None or stat.S_ISLNK(st.st_mode):
++        return 0
++    if stat.S_ISREG(st.st_mode):
++        return st.st_size
++    total = 0
++    if stat.S_ISDIR(st.st_mode):
++        for root, _dirs, files in os.walk(path):
+             for name in files:
+-                fp = os.path.join(root, name)
+                 try:
+-                    if not os.path.islink(fp):
+-                        total += os.path.getsize(fp)
++                    fst = os.lstat(os.path.join(root, name))
+                 except OSError:
+-                    pass
+-        return total
+-    except OSError:
+-        return 0
++                    continue
++                if stat.S_ISREG(fst.st_mode):
++                    total += fst.st_size
++    return total
++
++
++# ── Metadata ────────────────────────────────────────────────────────────────
++
++def _soft_meta(fn, *args, **kwargs):
++    try:
++        fn(*args, **kwargs)
++    except OSError as e:
++        if e.errno not in _SOFT_META_ERRNOS:
++            raise
+ 
+ 
+-def safe_copystat(src, dest):
+-    """copystat like cp -a: permission/unsupported metadata errors are warnings,
+-    not failures (e.g. NTFS/exFAT/FAT mounts that reject chmod or utime)."""
++def _copy_xattrs(src_fd, dst_fd):
+     try:
+-        shutil.copystat(src, dest)
+-    except (PermissionError, OSError):
++        names = os.listxattr(src_fd)
++    except OSError as e:
++        if e.errno in _SOFT_META_ERRNOS:
++            return
++        raise
++    for name in names:
++        try:
++            os.setxattr(dst_fd, name, os.getxattr(src_fd, name))
++        except OSError as e:
++            if e.errno not in _SOFT_META_ERRNOS:
++                raise
++
++
++def _apply_metadata(dst_fd, s_st, src_fd):
++    _copy_xattrs(src_fd, dst_fd)
++    mode = stat.S_IMODE(s_st.st_mode)
++    if s_st.st_uid != os.geteuid():
++        mode &= ~(stat.S_ISUID | stat.S_ISGID)  # like cp: no foreign setuid copies
++    _soft_meta(os.fchmod, dst_fd, mode)
++    _soft_meta(os.utime, dst_fd, ns=(s_st.st_atime_ns, s_st.st_mtime_ns))
++
++
++# ── Owned-output cleanup ────────────────────────────────────────────────────
++
++def _discard(dir_fd, name, ident):
++    """Remove a non-directory entry this run created, only if it is still ours."""
++    try:
++        st = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
++        if _ident(st) == ident:
++            os.unlink(name, dir_fd=dir_fd)
++    except FileNotFoundError:
+         pass
++    except OSError as e:
++        _warn("could not remove partial output '%s': %s" % (name, _err_text(e)))
+ 
+ 
+-def copy_file_progress(src, dest):
+-    d = os.path.dirname(dest)
+-    if d:
+-        os.makedirs(d, exist_ok=True)
+-    with open(src, "rb") as fsrc, open(dest, "wb") as fdst:
+-        while True:
+-            buf = fsrc.read(CHUNK)
+-            if not buf:
+-                break
+-            fdst.write(buf)
+-            _state["done"] += len(buf)
+-            report()
+-    safe_copystat(src, dest)
+-
+-
+-def copy_tree_progress(src, dest):
+-    """Recursive copy preserving symlinks and timestamps (cp -a style)."""
+-    os.makedirs(dest, exist_ok=True)
+-    safe_copystat(src, dest)
+-    for root, dirs, files in os.walk(src):
+-        rel = os.path.relpath(root, src)
+-        target_root = dest if rel == "." else os.path.join(dest, rel)
+-        for name in dirs:
+-            s = os.path.join(root, name)
+-            if not os.path.islink(s):
+-                os.makedirs(os.path.join(target_root, name), exist_ok=True)
+-        for name in files:
+-            s = os.path.join(root, name)
+-            t = os.path.join(target_root, name)
+-            if os.path.islink(s):
+-                if os.path.lexists(t):
+-                    os.remove(t)
+-                os.symlink(os.readlink(s), t)
+-            else:
+-                copy_file_progress(s, t)
+-    # Bottom-up so children timestamps are set before their parents
+-    for root, dirs, files in os.walk(src, topdown=False):
+-        rel = os.path.relpath(root, src)
+-        target_root = dest if rel == "." else os.path.join(dest, rel)
+-        safe_copystat(root, target_root)
++def _close_after_error(fd):
++    """Close fd while another exception is already propagating."""
++    try:
++        os.close(fd)
++    except OSError as e:
++        _warn("close failed: %s" % _err_text(e))
++
++
++def _fill_new_file(dir_fd, name, out, fill):
++    """Run fill(out) on a file this run just created exclusively; on any failure
++    the partial file is removed and the original error propagates."""
++    ident = _ident(os.fstat(out))
++    try:
++        fill(out)
++    except BaseException:
++        _close_after_error(out)
++        _discard(dir_fd, name, ident)
++        raise
++    try:
++        os.close(out)
++    except BaseException:
++        _discard(dir_fd, name, ident)
++        raise
++    return ident
++
++
++# ── Entry creation (always exclusive) ───────────────────────────────────────
++# create(entry, durable) makes a brand-new entry named `entry` in its bound
++# directory fd, raising FileExistsError if the name is taken, cleaning up its
++# own partial output on failure, and returning the new entry's (dev, ino).
++
++def _copy_data(src_fd, dst_fd):
++    while True:
++        buf = os.read(src_fd, CHUNK)
++        if not buf:
++            return
++        view = memoryview(buf)
++        while view:
++            view = view[os.write(dst_fd, view):]
++        _state["done"] += len(buf)
++        report()
++
++
++def _create_regular(src, s_st, dir_fd, entry, durable):
++    # O_NONBLOCK only so a source swapped for a FIFO cannot hang the open.
++    src_fd = os.open(src, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
++    try:
++        fst = os.fstat(src_fd)
++        if not stat.S_ISREG(fst.st_mode) or _ident(fst) != _ident(s_st):
++            raise TransferError("'%s' changed while it was being copied" % src)
++        os.set_blocking(src_fd, True)
++        out = os.open(entry, _NEW_FILE_FLAGS, 0o600, dir_fd=dir_fd)
++
++        def fill(fd):
++            _copy_data(src_fd, fd)
++            _apply_metadata(fd, fst, src_fd)
++            if durable:
++                os.fsync(fd)
++
++        return _fill_new_file(dir_fd, entry, out, fill)
++    finally:
++        os.close(src_fd)
++
++
++def _create_symlink(target, s_st, dir_fd, entry, durable):
++    os.symlink(target, entry, dir_fd=dir_fd)
++    ident = _ident(os.stat(entry, dir_fd=dir_fd, follow_symlinks=False))
++    try:
++        _soft_meta(os.utime, entry, ns=(s_st.st_atime_ns, s_st.st_mtime_ns),
++                   dir_fd=dir_fd, follow_symlinks=False)
++    except BaseException:
++        _discard(dir_fd, entry, ident)
++        raise
++    return ident
++
++
++def _create_fifo(s_st, dir_fd, entry, durable):
++    os.mkfifo(entry, stat.S_IMODE(s_st.st_mode) & 0o777, dir_fd=dir_fd)
++    ident = _ident(os.stat(entry, dir_fd=dir_fd, follow_symlinks=False))
++    try:
++        _soft_meta(os.utime, entry, ns=(s_st.st_atime_ns, s_st.st_mtime_ns),
++                   dir_fd=dir_fd, follow_symlinks=False)
++    except BaseException:
++        _discard(dir_fd, entry, ident)
++        raise
++    return ident
++
++
++def _create_temp(dir_fd, create):
++    for _ in range(16):
++        tmp = ".paste-%s.tmp" % secrets.token_hex(8)
++        try:
++            return tmp, create(tmp, True)
++        except FileExistsError:
++            continue
++    raise TransferError("could not allocate a temporary file name")
++
++
++def _publish(dir_fd, name, s_st, replace, create):
++    """Create `name` exclusively; with approval, atomically replace an existing
++    non-directory entry (the entry itself, never its referent or other links)."""
++    if replace:
++        d_st = _lstat_at(dir_fd, name)
++        if d_st is not None:
++            _check_replace(s_st, d_st, name)
++            tmp, ident = _create_temp(dir_fd, create)
++            try:
++                os.replace(tmp, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
++            except BaseException:
++                _discard(dir_fd, tmp, ident)
++                raise
++            return
++    try:
++        create(name, False)
++    except FileExistsError:
++        raise _exists(name) from None
+ 
+ 
+-def remove_tree(path):
+-    if os.path.islink(path) or os.path.isfile(path):
+-        os.remove(path)
++# ── Copy ────────────────────────────────────────────────────────────────────
++
++def _copy_entry(src, s_st, dir_fd, name, replace, manifest):
++    """Copy src (never following src links) to `name` inside dir_fd.
++    When manifest is a list, every fully copied source entry is appended to it
++    in post-order (children before their folder)."""
++    mode = s_st.st_mode
++    if stat.S_ISDIR(mode):
++        _copy_dir(src, s_st, dir_fd, name, replace, manifest)
++        return
++    if stat.S_ISREG(mode):
++        create = functools.partial(_create_regular, src, s_st, dir_fd)
++    elif stat.S_ISLNK(mode):
++        create = functools.partial(_create_symlink, os.readlink(src), s_st, dir_fd)
++    elif stat.S_ISFIFO(mode):
++        create = functools.partial(_create_fifo, s_st, dir_fd)
+     else:
+-        shutil.rmtree(path, ignore_errors=True)
++        raise TransferError("'%s' is a socket or device file and cannot be copied" % src)
++    _publish(dir_fd, name, s_st, replace, create)
++    if manifest is not None:
++        manifest.append((src, s_st))
+ 
+ 
+-def do_job(action, src, dest):
+-    """Perform one transfer job. Returns True on success."""
++def _copy_dir(src, s_st, dir_fd, name, replace, manifest):
++    src_fd = os.open(src, _DIR_FLAGS | os.O_NOFOLLOW)
+     try:
+-        if action == "move":
++        if _ident(os.fstat(src_fd)) != _ident(s_st):
++            raise TransferError("'%s' changed while it was being copied" % src)
++        d_st = _lstat_at(dir_fd, name)
++        if d_st is None:
+             try:
+-                os.rename(src, dest)
+-                return True
+-            except OSError:
+-                pass  # cross-filesystem: fall through to copy + delete
+-        if os.path.islink(src):
+-            # cp -a copies the link itself, not its target
+-            d = os.path.dirname(dest)
+-            if d:
+-                os.makedirs(d, exist_ok=True)
+-            if os.path.lexists(dest):
+-                os.remove(dest)
+-            os.symlink(os.readlink(src), dest)
+-        elif os.path.isdir(src):
+-            copy_tree_progress(src, dest)
++                os.mkdir(name, 0o700, dir_fd=dir_fd)
++            except FileExistsError:
++                raise _exists(name) from None
++            expected = _ident(os.stat(name, dir_fd=dir_fd, follow_symlinks=False))
++        elif not replace:
++            raise _exists(name)
+         else:
+-            copy_file_progress(src, dest)
+-        if action == "move":
+-            remove_tree(src)
+-        return True
+-    except Exception as e:
++            _check_replace(s_st, d_st, name)  # merge only into a real folder
++            expected = _ident(d_st)
++        # O_NOFOLLOW: a folder swapped for a link meanwhile is refused, not traversed.
++        dest_fd = os.open(name, _DIR_FLAGS | os.O_NOFOLLOW, dir_fd=dir_fd)
+         try:
+-            if os.path.isfile(dest) or os.path.islink(dest):
+-                os.remove(dest)
+-        except OSError:
+-            pass
+-        emit("E\t%s\t%s" % (src, str(e).replace("\t", " ")))
+-        return False
++            if _ident(os.fstat(dest_fd)) != expected:
++                raise TransferError("'%s' changed while it was being copied" % name)
++            with os.scandir(src_fd) as it:
++                children = [(e.name, e.stat(follow_symlinks=False)) for e in it]
++            for child, c_st in children:
++                _copy_entry(os.path.join(src, child), c_st, dest_fd, child, replace, manifest)
++            if d_st is None:  # merged-into folders keep their own metadata
++                _apply_metadata(dest_fd, s_st, src_fd)
++        finally:
++            os.close(dest_fd)
++    finally:
++        os.close(src_fd)
++    if manifest is not None:
++        manifest.append((src, s_st))
+ 
+ 
+-def job_is_noop(src, dest):
++def _copy_into(src, s_st, parent, name, replace, manifest):
++    parent_fd = os.open(parent, _DIR_FLAGS)
+     try:
+-        return os.path.realpath(src) == os.path.realpath(dest)
+-    except OSError:
+-        return False
++        _copy_entry(src, s_st, parent_fd, name, replace, manifest)
++    finally:
++        os.close(parent_fd)
+ 
+ 
+-def job_is_into_self(src, dest):
++# ── Move ────────────────────────────────────────────────────────────────────
++
++def _renameat2_noreplace(src, dst):
++    if _renameat2 is None:
++        raise OSError(errno.ENOSYS, os.strerror(errno.ENOSYS), src, None, dst)
++    if _renameat2(_AT_FDCWD, os.fsencode(src), _AT_FDCWD, os.fsencode(dst), _RENAME_NOREPLACE) != 0:
++        err = ctypes.get_errno()
++        raise OSError(err, os.strerror(err), src, None, dst)
++
++
++def _rename_noreplace(src, dst):
++    """Rename src to dst without ever replacing an existing dst entry.
++    Returns False when the caller must copy and delete instead (EXDEV, or no
++    atomic no-replace primitive on this filesystem)."""
+     try:
++        _renameat2_noreplace(src, dst)
++        return True
++    except OSError as e:
++        if e.errno == errno.EEXIST:
++            raise _exists(dst) from None
++        if e.errno == errno.EXDEV:
++            return False
++        if e.errno not in _NO_RENAME_FLAG_ERRNOS:
++            raise
++    if stat.S_ISDIR(os.lstat(src).st_mode):
++        # Exclusive empty placeholder; rename(2) may only replace that empty folder.
++        try:
++            os.mkdir(dst, 0o700)
++        except FileExistsError:
++            raise _exists(dst) from None
++        try:
++            os.rename(src, dst)
++        except BaseException as e:
++            try:
++                os.rmdir(dst)  # removes only a still-empty folder
++            except OSError as rm_err:
++                _warn("could not remove placeholder '%s': %s" % (dst, _err_text(rm_err)))
++            if isinstance(e, OSError) and e.errno == errno.EXDEV:
++                return False
++            raise
++        return True
++    try:
++        os.link(src, dst, follow_symlinks=False)  # fails atomically if dst exists
++    except FileExistsError:
++        raise _exists(dst) from None
++    except OSError as e:
++        if e.errno in _NO_LINK_ERRNOS:
++            return False
++        raise
++    try:
++        os.unlink(src)
++    except BaseException:
++        try:
++            os.unlink(dst)
++        except OSError as rm_err:
++            _warn("could not remove extra link '%s': %s" % (dst, _err_text(rm_err)))
++        raise
++    return True
++
++
++def _remove_sources(manifest):
++    """Delete moved sources after the whole copy succeeded, post-order, and only
++    entries that are unchanged since they were copied."""
++    for path, st in manifest:
++        try:
++            cur = os.lstat(path)
++            same = _ident(cur) == _ident(st) and stat.S_IFMT(cur.st_mode) == stat.S_IFMT(st.st_mode)
++            if same and stat.S_ISREG(st.st_mode):
++                same = (cur.st_size, cur.st_mtime_ns) == (st.st_size, st.st_mtime_ns)
++            if not same:
++                raise TransferError("'%s' changed during the move; it was copied and the original kept" % path)
++            if stat.S_ISDIR(st.st_mode):
++                os.rmdir(path)
++            else:
++                os.unlink(path)
++        except OSError as e:
++            raise TransferError("copied, but could not remove the original: %s" % _err_text(e)) from e
++
++
++def _move(src, s_st, parent, name, replace):
++    dest = os.path.join(parent, name)
++    d_st = _lstat(dest)
++    if d_st is None or not replace:
++        if d_st is not None:
++            raise _exists(dest)
++        if _rename_noreplace(src, dest):
++            return
++        manifest = []
++        _copy_into(src, s_st, parent, name, False, manifest)
++        _remove_sources(manifest)
++        return
++    _check_replace(s_st, d_st, name)
++    try:
++        # Replaces the entry itself (never a link's referent); a folder can only
++        # replace an empty folder here, non-empty ones are merged below.
++        os.rename(src, dest)
++        return
++    except OSError as e:
++        merge = stat.S_ISDIR(s_st.st_mode) and e.errno in (errno.ENOTEMPTY, errno.EEXIST)
++        if e.errno != errno.EXDEV and not merge:
++            raise
++    manifest = []
++    _copy_into(src, s_st, parent, name, True, manifest)
++    _remove_sources(manifest)
++
++
++# ── Jobs ────────────────────────────────────────────────────────────────────
++
++def perform(action, replace, src, dest):
++    _check_name(src)
++    name = _check_name(dest)
++    parent = os.path.dirname(dest) or "."
++    s_st = os.lstat(src)
++    if stat.S_ISDIR(s_st.st_mode):
+         src_real = os.path.realpath(src)
+         dest_real = os.path.realpath(dest)
+-        return os.path.isdir(src) and os.path.commonpath([src_real, dest_real]) == src_real
+-    except (OSError, ValueError):
++        if _is_within(dest_real, src_real):
++            raise TransferError("cannot %s a folder into itself" % action)
++        if replace and _is_within(src_real, dest_real):
++            raise TransferError("cannot merge a folder into a folder that contains it")
++    if action == "move":
++        _move(src, s_st, parent, name, replace)
++    else:
++        _copy_into(src, s_st, parent, name, replace, None)
++
++
++def do_job(action, replace, src, dest):
++    """Perform one transfer job. Returns True on success."""
++    try:
++        perform(action, replace, src, dest)
++        return True
++    except (OSError, TransferError, RecursionError) as e:
++        emit("E", src, _err_text(e))
+         return False
+ 
+ 
+ def run_jobs(jobs):
+-    """jobs: list of (action, src, dest) with action in ('copy', 'move')."""
+-    jobs = [j for j in jobs if not job_is_noop(j[1], j[2]) and not job_is_into_self(j[1], j[2])]
++    """jobs: list of (action, replace, src, dest) with action in ('copy', 'move')."""
++    jobs = [j for j in jobs if not _is_noop(j[2], j[3])]
+     if not jobs:
+-        emit("S\t0\t0")
++        emit("S", 0, 0)
+         return
+-    emit("A\t" + jobs[0][0])
+-    total = 0
+-    for _, src, _ in jobs:
+-        total += tree_size(src)
+-    _state["total"] = total
+-    emit("T\t%d" % total)
++    emit("A", jobs[0][0])
++    sizes = [tree_size(j[2]) for j in jobs]
++    _state["total"] = sum(sizes)
++    emit("T", _state["total"])
+     ok = 0
+     fail = 0
+-    for action, src, dest in jobs:
+-        _state["current"] = os.path.basename(src.rstrip(os.sep)) or src
++    written = set()
++    for (action, replace, src, dest), size in zip(jobs, sizes):
++        _state["current"] = os.path.basename(src) or src
+         job_start = _state["done"]
+-        job_size = tree_size(src)
+-        if do_job(action, src, dest):
++        key = _entry_key(dest)
++        if key in written:
++            emit("E", src, "'%s' is already the destination of another item in this paste" % os.path.basename(dest))
++            success = False
++        else:
++            written.add(key)
++            success = do_job(action, replace, src, dest)
++        if success:
+             ok += 1
+         else:
+-            fail += 1  # E line already emitted by do_job with the error message
+-        _state["done"] = job_start + job_size
++            fail += 1  # E line already emitted with the error message
++        _state["done"] = job_start + size
+         report(force=True)
+-    emit("S\t%d\t%d" % (ok, fail))
++    emit("S", ok, fail)
++
++
++def uri_to_path(line):
++    """Turn a single clipboard/drop line into an absolute local path, or None."""
++    line = line.strip()
++    if not line:
++        return None
++    if line.startswith("file://"):
++        line = line[7:]
++        if line.startswith("localhost/"):
++            line = line[9:]
++    decoded = urllib.parse.unquote(line, errors="surrogateescape")
++    if not decoded.startswith("/") or "\0" in decoded:
++        return None  # remote host or relative/malformed path
++    decoded = decoded.rstrip("/")
++    if os.path.basename(decoded) in ("", ".", ".."):
++        return None
++    return decoded if os.path.lexists(decoded) else None
++
++
++def unique_dest(src, dest, reserved):
++    """Return dest, or a free "name (N).ext" sibling when another entry exists or
++    an earlier item of this batch already claimed the name. Drop and clipboard
++    pastes have no overwrite prompt, so they never replace existing entries;
++    pasting an entry onto itself stays a no-op."""
++    if dest not in reserved and (not os.path.lexists(dest) or _is_noop(src, dest)):
++        return dest
++    folder, name = os.path.split(dest)
++    base, ext = os.path.splitext(name)
++    if os.path.isdir(src) or base == "":
++        base, ext = name, ""
++    n = 2
++    while True:
++        candidate = os.path.join(folder, "%s (%d)%s" % (base, n, ext))
++        if candidate not in reserved and not os.path.lexists(candidate):
++            return candidate
++        n += 1
+ 
+ 
+ def build_jobs(target_dir, paths, action):
+-    """Build (action, src, dest) jobs copying each path into target_dir."""
++    """Build no-replace (action, False, src, dest) jobs copying each path into target_dir."""
+     jobs = []
+-    for src in paths:
+-        name = os.path.basename(src.rstrip(os.sep)) or src
+-        jobs.append((action, src, os.path.join(target_dir, name)))
++    reserved = set()
++    for src in dict.fromkeys(paths):
++        dest = unique_dest(src, os.path.join(target_dir, os.path.basename(src)), reserved)
++        reserved.add(dest)
++        jobs.append((action, False, src, dest))
+     return jobs
+ 
+ 
+@@ -215,117 +654,168 @@
+     if paths:
+         run_jobs(build_jobs(target_dir, paths, "copy"))
+     else:
+-        emit("S\t0\t0")
++        emit("S", 0, 0)
+ 
+ 
+-def handle_clipboard(target_dir):
+-    # 1. Check clipboard MIME types for image formats
++def handle_rename(src, dest):
++    """Rename/move src to exactly the entry dest, never replacing anything there."""
++    _check_name(src)
++    name = _check_name(dest)
++    s_st = os.lstat(src)
++    if _entry_key(src) == _entry_key(dest):
++        return
++    d_st = _lstat(dest)
++    if d_st is not None:
++        # Same inode with a single link (or a folder): dest is src itself under
++        # another spelling, e.g. a case-only rename on a case-insensitive mount.
++        if os.path.samestat(s_st, d_st) and (stat.S_ISDIR(s_st.st_mode) or s_st.st_nlink == 1):
++            os.rename(src, dest)
++            return
++        raise _exists(name)
++    perform("move", False, src, dest)
++
++
++def _save_clipboard_image(target_dir, image_type):
++    """Write the clipboard image to a new, exclusively created file; returns its name."""
++    ext = ".jpg" if ("jpeg" in image_type or "jpg" in image_type) else ".png"
++    base = "Clipboard_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
++    dir_fd = os.open(target_dir, _DIR_FLAGS)
++    try:
++        for n in range(1, 1000):
++            name = base + ext if n == 1 else "%s (%d)%s" % (base, n, ext)
++            try:
++                out = os.open(name, _NEW_FILE_FLAGS, 0o666, dir_fd=dir_fd)
++                break
++            except FileExistsError:
++                continue
++        else:
++            raise TransferError("no free file name for the clipboard image")
++
++        def fill(fd):
++            proc = subprocess.run(["wl-paste", "-t", image_type], stdout=fd, stderr=subprocess.PIPE)
++            if proc.returncode != 0:
++                raise TransferError("wl-paste failed: " + proc.stderr.decode(errors="replace").strip())
++            if os.fstat(fd).st_size == 0:
++                raise TransferError("the clipboard image is empty")
++
++        _fill_new_file(dir_fd, name, out, fill)
++        return name
++    finally:
++        os.close(dir_fd)
++
++
++def _wl_paste(args):
++    """stdout of wl-paste, or None when it is unavailable or fails."""
+     try:
+-        p_types = subprocess.run(['wl-paste', '--list-types'], capture_output=True, text=True)
+-        types = p_types.stdout.splitlines()
+-    except Exception:
+-        types = []
+-
+-    image_type = None
+-    for t in types:
+-        if t.startswith('image/'):
+-            image_type = t
+-            break
++        p = subprocess.run(["wl-paste"] + args, capture_output=True, text=True, errors="surrogateescape")
++    except OSError:
++        return None
++    return p.stdout if p.returncode == 0 else None
+ 
+-    if image_type:
+-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+-        ext = "png"
+-        if "jpeg" in image_type or "jpg" in image_type:
+-            ext = "jpg"
+ 
+-        filename = f"Clipboard_{timestamp}.{ext}"
+-        dest_path = os.path.join(target_dir, filename)
++def handle_clipboard(target_dir):
++    # 1. Check clipboard MIME types for image formats
++    types = (_wl_paste(["--list-types"]) or "").splitlines()
++    image_type = next((t for t in types if t.startswith("image/")), None)
+ 
++    if image_type:
+         try:
+-            with open(dest_path, 'wb') as f:
+-                subprocess.run(['wl-paste', '-t', image_type], stdout=f)
+-            sys.exit(0)
+-        except Exception as e:
+-            print(f"Error saving image: {e}", file=sys.stderr)
++            _save_clipboard_image(target_dir, image_type)
++        except (OSError, TransferError) as e:
++            emit("E", target_dir, "Error saving image: " + _err_text(e))
++            emit("S", 0, 1)
+             sys.exit(1)
++        emit("S", 1, 0)
++        sys.exit(0)
+ 
+     # 2. Get clipboard contents for file paths
+-    clip = ""
+-    try:
+-        p = subprocess.run(['wl-paste', '-t', 'x-special/gnome-copied-files'], capture_output=True, text=True)
+-        if p.returncode == 0:
+-            clip = p.stdout
+-    except Exception:
+-        pass
++    clip = _wl_paste(["-t", "x-special/gnome-copied-files"]) or ""
+ 
+     if not clip.strip():
+         # Fallback: try plain text only if it looks like file URIs
+-        try:
+-            p = subprocess.run(['wl-paste'], capture_output=True, text=True)
+-            if p.returncode == 0:
+-                candidate = p.stdout.strip()
+-                # Only treat as file paths when all non-empty lines start with file://
+-                lines_candidate = [l.strip() for l in candidate.splitlines() if l.strip()]
+-                if lines_candidate and all(l.startswith("file://") for l in lines_candidate):
+-                    clip = candidate
+-        except Exception:
+-            pass
+-
+-    if not clip.strip():
+-        emit("S\t0\t0")
+-        sys.exit(0)
++        candidate = (_wl_paste([]) or "").strip()
++        lines_candidate = [l.strip() for l in candidate.splitlines() if l.strip()]
++        if lines_candidate and all(l.startswith("file://") for l in lines_candidate):
++            clip = candidate
+ 
+-    lines = [line.strip() for line in clip.split('\n') if line.strip()]
++    lines = [line.strip() for line in clip.split("\n") if line.strip()]
+     if not lines:
+-        emit("S\t0\t0")
++        emit("S", 0, 0)
+         sys.exit(0)
+ 
+     action = "copy"
+-    file_lines = []
+-
++    file_lines = lines
+     if lines[0] in ("copy", "cut"):
+         action = lines[0]
+         file_lines = lines[1:]
+-    else:
+-        file_lines = lines
+ 
+     paths = [p for p in (uri_to_path(line) for line in file_lines) if p]
+     if not paths:
+-        emit("S\t0\t0")
++        emit("S", 0, 0)
+         sys.exit(0)
+ 
+-    run_jobs(build_jobs(target_dir, paths, "copy" if action != "cut" else "move"))
++    run_jobs(build_jobs(target_dir, paths, "move" if action == "cut" else "copy"))
+ 
+ 
+-def main():
+-    argv = sys.argv[1:]
++def _usage(message):
++    _warn("paste.py: " + message)
++    sys.exit(2)
++
++
++def _dispatch(argv):
+     if not argv:
+-        sys.exit(1)
++        _usage("missing arguments")
+ 
+-    # Explicit ops mode: --ops <action> <src> <dest> [<action> <src> <dest> ...]
++    # Explicit ops mode: --ops <verb> <src> <dest> [<verb> <src> <dest> ...]
++    # verb: copy | move (never replace) | copy-replace | move-replace (approved)
+     if argv[0] == "--ops":
+         rest = argv[1:]
+         if len(rest) < 3 or len(rest) % 3 != 0:
+-            sys.exit(1)
++            _usage("--ops expects <verb> <src> <dest> triples")
+         jobs = []
+         for i in range(0, len(rest), 3):
+-            a, s, d = rest[i], rest[i + 1], rest[i + 2]
+-            if a not in ("copy", "move"):
+-                sys.exit(1)
+-            jobs.append((a, s, d))
++            verb, src, dest = rest[i], rest[i + 1], rest[i + 2]
++            if verb not in OPS_VERBS:
++                _usage("unknown --ops verb '%s'" % verb)
++            action, replace = OPS_VERBS[verb]
++            jobs.append((action, replace, src.rstrip("/") or src, dest))
+         run_jobs(jobs)
+         return
+ 
+     # Drop mode: paste.py --drop <target_dir> <uri> [<uri> ...]
+     if argv[0] == "--drop":
+         if len(argv) < 3:
+-            sys.exit(1)
++            _usage("--drop expects <target_dir> <uri>...")
+         handle_drop(argv[1], argv[2:])
+         return
+ 
++    # Rename mode: paste.py --rename <src> <dest>; no stdout, exit 0 only on success,
++    # otherwise exit 1 with a one-line reason on stderr.
++    if argv[0] == "--rename":
++        if len(argv) != 3:
++            _usage("--rename expects <src> <dest>")
++        _state["quiet"] = True
++        try:
++            handle_rename(argv[1], argv[2])
++        except (OSError, TransferError, RecursionError) as e:
++            _warn(_err_text(e))
++            sys.exit(1)
++        return
++
+     # Clipboard mode: paste.py <target_dir>
+     handle_clipboard(argv[0])
+ 
+ 
++def main():
++    signal.signal(signal.SIGTERM, _on_sigterm)
++    sys.stdout.reconfigure(errors="backslashreplace")
++    try:
++        _dispatch(sys.argv[1:])
++    except Cancelled:
++        sys.exit(143)
++    except KeyboardInterrupt:
++        sys.exit(130)
++
++
+ if __name__ == "__main__":
+     main()

@@ -1,0 +1,37 @@
+{
+    "id": "lyrics",
+    "name": "Lyrics",
+    "description": "Show synced lyrics of the currently playing song (Netease + lrclib) in DankBar",
+    "version": "0.3.0",
+    "author": "gmaaa",
+    "icon": "lyrics",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./LyricsWidget.qml",
+    "settings": "./LyricsSettings.qml",
+    "settings_schema": {
+        "lyricsSource": {
+            "type": "string",
+            "default": "netease"
+        },
+        "maxWidth": {
+            "type": "integer",
+            "default": 280,
+            "minimum": 80,
+            "maximum": 600
+        },
+        "gapMode": {
+            "type": "string",
+            "default": "dots"
+        }
+    },
+    "requires": [],
+    "requires_dms": ">=1.4.0",
+    "permissions": [
+        "settings_read",
+        "settings_write",
+        "network"
+    ]
+}

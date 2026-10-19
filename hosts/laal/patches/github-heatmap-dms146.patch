@@ -1,0 +1,385 @@
+diff -ruN a/components/Settings.qml b/components/Settings.qml
+--- a/components/Settings.qml
++++ b/components/Settings.qml
+@@ -99,7 +99,7 @@
+                     DankIcon { id: cardIcon; name: iconName; size: 22; anchors.verticalCenter: parent.verticalCenter; opacity: 0.8 }
+                     Column {
+                         width: Math.max(0, parent.width - cardIcon.width - Theme.spacingM)
+-                        spacing: Theme.spacingXXS
++                        spacing: Theme.spacingXXS ?? 2
+                         StyledText {
+                             text: titleText
+                             font.pixelSize: Theme.fontSizeMedium
+@@ -196,7 +196,7 @@
+ 
+                 Column {
+                     Layout.fillWidth: true
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+                     Layout.alignment: Qt.AlignVCenter
+                     StyledText {
+                         text: "Show Display Name"
+@@ -275,7 +275,7 @@
+                 
+                 Column {
+                     Layout.fillWidth: true
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+                     Layout.alignment: Qt.AlignVCenter
+                     StyledText {
+                         text: "System Alerts"
+@@ -328,7 +328,7 @@
+ 
+                 Column {
+                     Layout.fillWidth: true
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+                     Layout.alignment: Qt.AlignVCenter
+                     StyledText {
+                         text: "Follow DMS Theme Color"
+@@ -401,7 +401,7 @@
+ 
+                     Column {
+                         Layout.fillWidth: true
+-                        spacing: Theme.spacingXXS
++                        spacing: Theme.spacingXXS ?? 2
+                         Layout.alignment: Qt.AlignVCenter
+                         StyledText {
+                             text: "Compact Mode (Today Only)"
+@@ -431,7 +431,7 @@
+                 // Square size slider
+                 Column {
+                     width: parent.width
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+ 
+                     RowLayout {
+                         width: parent.width
+@@ -464,7 +464,7 @@
+                 // Spacing slider
+                 Column {
+                     width: parent.width
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+ 
+                     RowLayout {
+                         width: parent.width
+@@ -541,7 +541,7 @@
+ 
+                     Column {
+                         Layout.fillWidth: true
+-                        spacing: Theme.spacingXXS
++                        spacing: Theme.spacingXXS ?? 2
+                         Layout.alignment: Qt.AlignVCenter
+                         StyledText {
+                             text: "Background Opacity"
+@@ -606,7 +606,7 @@
+ 
+                 Column {
+                     width: parent.width
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+ 
+                     RowLayout {
+                         width: parent.width
+@@ -638,7 +638,7 @@
+ 
+                 Column {
+                     width: parent.width
+-                    spacing: Theme.spacingXXS
++                    spacing: Theme.spacingXXS ?? 2
+ 
+                     RowLayout {
+                         width: parent.width
+@@ -721,7 +721,7 @@
+                     root.saveValue("desktopSquareSize", desktopSquareSize)
+                     root.saveValue("desktopSquareSpacing", desktopSquareSpacing)
+ 
+-                    ToastService.showSuccess("Settings updated successfully")
++                    ToastService.showInfo("Settings updated successfully")
+                 }
+             }
+ 
+diff -ruN a/GitHubContributionFetcher.qml b/GitHubContributionFetcher.qml
+--- a/GitHubContributionFetcher.qml
++++ b/GitHubContributionFetcher.qml
+@@ -0,0 +1,217 @@
++import QtQuick
++import qs.Common
++import qs.Services
++
++// Fetches the public contribution calendar for the desktop surface and stores
++// it in the plugin "cache" state that components/DesktopWidget.qml renders.
++// Upstream only fetches from the DankBar surface; this keeps the desktop widget
++// self-sufficient without adding anything to the bar. Read-only, unauthenticated
++// GET requests; no token is read or sent.
++Item {
++    id: root
++
++    visible: false
++
++    property string pluginId: ""
++
++    readonly property string contributionsApi: "https://github-contributions-api.jogruber.de/v4/"
++    readonly property string profileApi: "https://api.github.com/users/"
++    readonly property int minimumIntervalSeconds: 300
++    readonly property int failureRetryMs: 300000
++    readonly property var weekdayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
++    readonly property var monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
++    readonly property var classicPalette: ["#202329", "#0e4429", "#006d32", "#26a641", "#39d353"]
++
++    property string username: ""
++    property int refreshIntervalSeconds: 1800
++    property bool showDisplayName: false
++    property bool busy: false
++
++    function readSettings() {
++        if (!pluginId)
++            return;
++        const name = String(SettingsData.getPluginSetting(pluginId, "username", "") || "").trim();
++        const interval = Number(SettingsData.getPluginSetting(pluginId, "refreshInterval", 1800)) || 1800;
++        showDisplayName = SettingsData.getPluginSetting(pluginId, "showDisplayName", false) === true;
++        const nextInterval = Math.max(minimumIntervalSeconds, interval);
++        const changed = name !== username || nextInterval !== refreshIntervalSeconds;
++        username = name;
++        refreshIntervalSeconds = nextInterval;
++        if (changed && !busy)
++            schedule(0);
++    }
++
++    function isValidUsername(name) {
++        return /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/.test(name);
++    }
++
++    function cachedAgeMs() {
++        const cache = PluginService.loadPluginState(pluginId, "cache", null);
++        if (!cache || cache.username !== username || typeof cache.fetchedAt !== "number")
++            return Infinity;
++        return Math.max(0, Date.now() - cache.fetchedAt);
++    }
++
++    function schedule(minimumDelayMs) {
++        refreshTimer.stop();
++        if (!pluginId || !isValidUsername(username)) {
++            if (username)
++                console.warn("GitHubHeatmapPlus: ignoring invalid GitHub username");
++            return;
++        }
++        const remaining = refreshIntervalSeconds * 1000 - cachedAgeMs();
++        refreshTimer.interval = Math.max(minimumDelayMs, remaining, 1000);
++        refreshTimer.start();
++    }
++
++    function fetchNow() {
++        if (busy || !isValidUsername(username))
++            return;
++        // Another desktop instance may already have refreshed the shared cache.
++        if (cachedAgeMs() < (refreshIntervalSeconds - 60) * 1000) {
++            schedule(0);
++            return;
++        }
++        busy = true;
++        const requestedUser = username;
++        // A null id gives each call its own process entry, so several desktop
++        // instances never overwrite each other's callbacks.
++        Proc.runCommand(null, ["curl", "-fsS", "--proto", "=https", "--connect-timeout", "10", "--max-time", "30", "--retry", "2", contributionsApi + encodeURIComponent(requestedUser) + "?y=last"], function (output, exitCode) {
++            if (requestedUser !== root.username) {
++                root.busy = false;
++                root.schedule(0);
++                return;
++            }
++            if (exitCode !== 0) {
++                root.finishFailure("contribution request failed (exit " + exitCode + ")");
++                return;
++            }
++            let payload;
++            try {
++                payload = JSON.parse(output);
++            } catch (e) {
++                root.finishFailure("contribution response is not JSON");
++                return;
++            }
++            if (!payload || !Array.isArray(payload.contributions)) {
++                root.finishFailure("contribution response has no calendar");
++                return;
++            }
++            if (!root.showDisplayName) {
++                root.store(requestedUser, payload.contributions, "");
++                return;
++            }
++            Proc.runCommand(null, ["curl", "-fsS", "--proto", "=https", "--connect-timeout", "5", "--max-time", "10", "-H", "Accept: application/vnd.github+json", root.profileApi + encodeURIComponent(requestedUser)], function (profileOutput, profileExit) {
++                let displayName = "";
++                if (profileExit === 0) {
++                    try {
++                        displayName = String(JSON.parse(profileOutput).name || "");
++                    } catch (e) {
++                        displayName = "";
++                    }
++                }
++                root.store(requestedUser, payload.contributions, displayName);
++            }, 0, 15000);
++        }, 0, 45000);
++    }
++
++    function finishFailure(reason) {
++        busy = false;
++        console.warn("GitHubHeatmapPlus:", reason, "- keeping previous cache");
++        schedule(failureRetryMs);
++    }
++
++    function isoDate(date) {
++        const m = date.getUTCMonth() + 1;
++        const d = date.getUTCDate();
++        return date.getUTCFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
++    }
++
++    function placeholder(weekday) {
++        return {
++            weekday: weekday,
++            weekdayName: weekdayNames[weekday],
++            date: "--/--",
++            count: 0,
++            level: 0,
++            color: classicPalette[0],
++            tooltipText: ""
++        };
++    }
++
++    function makeDay(date, entry) {
++        const weekday = date.getUTCDay();
++        const count = Math.max(0, Number(entry ? entry.count : 0) || 0);
++        const level = Math.max(0, Math.min(4, Number(entry ? entry.level : 0) || 0));
++        const dd = date.getUTCDate();
++        const dayLabel = (dd < 10 ? "0" : "") + dd + " / " + monthNames[date.getUTCMonth()];
++        const year = String(date.getUTCFullYear()).slice(-2);
++        return {
++            weekday: weekday,
++            weekdayName: weekdayNames[weekday],
++            date: dayLabel + " / " + year,
++            count: count,
++            level: level,
++            color: classicPalette[level],
++            tooltipText: dayLabel + " :: " + count
++        };
++    }
++
++    // 52 Sunday-first weeks ending with the current local week; future days
++    // are placeholders, matching the upstream bar fetcher's grid layout.
++    function store(requestedUser, contributions, displayName) {
++        const byDate = {};
++        for (let i = 0; i < contributions.length; i++) {
++            const entry = contributions[i];
++            if (entry && typeof entry.date === "string")
++                byDate[entry.date] = entry;
++        }
++        const now = new Date();
++        const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
++        const todayIso = isoDate(today);
++        const start = new Date(today.getTime() - (today.getUTCDay() + 51 * 7) * 86400000);
++        const grid = [];
++        let total = 0;
++        for (let w = 0; w < 52; w++) {
++            const week = [];
++            for (let d = 0; d < 7; d++) {
++                const date = new Date(start.getTime() + (w * 7 + d) * 86400000);
++                const iso = isoDate(date);
++                if (iso > todayIso) {
++                    week.push(placeholder(d));
++                    continue;
++                }
++                const day = makeDay(date, byDate[iso]);
++                total += day.count;
++                week.push(day);
++            }
++            grid.push(week);
++        }
++        PluginService.savePluginState(pluginId, "cache", {
++            username: requestedUser,
++            fetchedAt: Date.now(),
++            total: String(total),
++            grid: grid.slice(-8),
++            gridYear: grid,
++            displayName: displayName
++        });
++        busy = false;
++        schedule(0);
++    }
++
++    Timer {
++        id: refreshTimer
++        repeat: false
++        onTriggered: root.fetchNow()
++    }
++
++    Connections {
++        target: SettingsData
++        function onPluginSettingsChanged() {
++            root.readSettings();
++        }
++    }
++
++    onPluginIdChanged: readSettings()
++    Component.onCompleted: readSettings()
++}
+diff -ruN a/GitHubHeatmapDesktop.qml b/GitHubHeatmapDesktop.qml
+--- a/GitHubHeatmapDesktop.qml
++++ b/GitHubHeatmapDesktop.qml
+@@ -0,0 +1,28 @@
++import QtQuick
++import qs.Modules.Plugins
++import "components" as Heatmap
++
++// Desktop entrypoint: upstream desktop view plus a fetcher, so the heatmap
++// works without the DankBar surface (DMS 1.4.6 loads one component per plugin).
++DesktopPluginComponent {
++    id: root
++
++    minWidth: view.minWidth
++    minHeight: view.minHeight
++
++    Heatmap.DesktopWidget {
++        id: view
++
++        anchors.fill: parent
++        pluginService: root.pluginService
++        pluginId: root.pluginId
++        instanceId: root.instanceId
++        instanceData: root.instanceData
++        widgetWidth: root.widgetWidth
++        widgetHeight: root.widgetHeight
++    }
++
++    GitHubContributionFetcher {
++        pluginId: root.pluginId
++    }
++}
+diff -ruN a/plugin.json b/plugin.json
+--- a/plugin.json
++++ b/plugin.json
+@@ -6,14 +6,10 @@
+   "version": "2.1.0",
+   "author": "maxlen727",
+   "icon": "code",
+-  "type": "composite",
+-  "components": {
+-    "widget": "./components/BarWidget.qml",
+-    "desktop": "./components/DesktopWidget.qml"
+-  },
++  "type": "desktop",
++  "component": "./GitHubHeatmapDesktop.qml",
+   "settings": "./components/Settings.qml",
+   "capabilities": [
+-    "dankbar-widget",
+     "desktop-widget"
+   ],
+   "repo": "https://github.com/maxlen727/DMS-GitHub_HeatMap_Plus",
+@@ -31,8 +27,7 @@
+     "xdg-utils",
+     "dms"
+   ],
+-  "requires_dms": ">=1.5.0",
+-  "screenshot": "https://raw.githubusercontent.com/maxlen727/DMS-GitHub_HeatMap_Plus/refs/heads/main/assets/Overall.png",
++  "requires_dms": ">=1.4.6",
+   "permissions": [
+     "settings_read",
+     "settings_write",

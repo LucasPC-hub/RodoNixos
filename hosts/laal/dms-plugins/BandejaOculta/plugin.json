@@ -1,0 +1,12 @@
+{
+  "id": "bandejaOculta",
+  "name": "Ícones ocultos",
+  "description": "Setinha na barra que abre uma bandeja como a do Windows, só com os apps em segundo plano (bandeja do sistema).",
+  "version": "1.0.0",
+  "author": "laal",
+  "type": "widget",
+  "capabilities": ["dankbar-widget"],
+  "component": "./BandejaOculta.qml",
+  "icon": "expand_less",
+  "requires_dms": ">=1.4.0"
+}

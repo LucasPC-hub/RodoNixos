@@ -1,0 +1,13 @@
+{
+    "id": "nordMediaCard",
+    "name": "Nord Media Card",
+    "description": "Material-style desktop media card (MPRIS) on the bottom layer, behind windows",
+    "version": "1.0.0",
+    "author": "matheus",
+    "type": "desktop",
+    "capabilities": ["desktop-widget", "media"],
+    "component": "./NordMediaCard.qml",
+    "icon": "album",
+    "requires_dms": ">=1.4.0",
+    "permissions": ["settings_read"]
+}

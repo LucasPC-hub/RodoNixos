@@ -1,0 +1,211 @@
+diff -r a/Persona5CalendarSettings.qml b/Persona5CalendarSettings.qml
+--- a/Persona5CalendarSettings.qml	2026-10-15 01:41:02.860107807 -0300
++++ b/Persona5CalendarSettings.qml	2026-10-15 01:41:02.874807093 -0300
+@@ -11,7 +11,7 @@
+         id: appearanceSection
+ 
+         SectionTitle {
+-            text: I18n.trFor("persona5Calendar", "Appearance")
++            text: I18n.tr("Appearance")
+             icon: "palette"
+             showReset: themeVersion.isDirty || widgetOpacity.isDirty
+             onResetClicked: {
+@@ -23,13 +23,13 @@
+         SelectionSettingPlus {
+             id: themeVersion
+             settingKey: "themeVersion"
+-            label: I18n.trFor("persona5Calendar", "Theme Palette")
+-            description: I18n.trFor("persona5Calendar", "Choose standard Persona 5 (Vanilla), Persona 5 Royal, or Dynamic (auto-switches to Royal in Jan & Feb).")
++            label: I18n.tr("Theme Palette")
++            description: I18n.tr("Choose standard Persona 5 (Vanilla), Persona 5 Royal, or Dynamic (auto-switches to Royal in Jan & Feb).")
+             defaultValue: "dynamic"
+             options: [
+-                { label: I18n.trFor("persona5Calendar", "Dynamic (Vanilla, Royal in Jan/Feb)"), value: "dynamic" },
+-                { label: I18n.trFor("persona5Calendar", "Vanilla (Persona 5)"), value: "vanilla" },
+-                { label: I18n.trFor("persona5Calendar", "Royal (Persona 5 Royal)"), value: "royal" }
++                { label: I18n.tr("Dynamic (Vanilla, Royal in Jan/Feb)"), value: "dynamic" },
++                { label: I18n.tr("Vanilla (Persona 5)"), value: "vanilla" },
++                { label: I18n.tr("Royal (Persona 5 Royal)"), value: "royal" }
+             ]
+         }
+ 
+@@ -38,8 +38,8 @@
+         SliderSettingPlus {
+             id: widgetOpacity
+             settingKey: "widgetOpacity"
+-            label: I18n.trFor("persona5Calendar", "Widget Opacity")
+-            description: I18n.trFor("persona5Calendar", "Adjust transparency of the calendar HUD.")
++            label: I18n.tr("Widget Opacity")
++            description: I18n.tr("Adjust transparency of the calendar HUD.")
+             defaultValue: 100
+             minimum: 20
+             maximum: 100
+@@ -53,7 +53,7 @@
+         id: weatherSection
+ 
+         SectionTitle {
+-            text: I18n.trFor("persona5Calendar", "Time & Weather")
++            text: I18n.tr("Time & Weather")
+             icon: "wb_sunny"
+             showReset: todMode.isDirty || showWeather.isDirty || animateWeather.isDirty || animInterval.isDirty
+             onResetClicked: {
+@@ -67,12 +67,12 @@
+         SelectionSettingPlus {
+             id: todMode
+             settingKey: "todMode"
+-            label: I18n.trFor("persona5Calendar", "Time of Day Logic")
+-            description: I18n.trFor("persona5Calendar", "Calculate time periods using Persona 5 game schedule or local solar calculations via DMS WeatherService.")
++            label: I18n.tr("Time of Day Logic")
++            description: I18n.tr("Calculate time periods using Persona 5 game schedule or local solar calculations via DMS WeatherService.")
+             defaultValue: "game"
+             options: [
+-                { label: I18n.trFor("persona5Calendar", "Persona 5 Game Schedule"), value: "game" },
+-                { label: I18n.trFor("persona5Calendar", "Solar Schedule (Sun Times)"), value: "solar" }
++                { label: I18n.tr("Persona 5 Game Schedule"), value: "game" },
++                { label: I18n.tr("Solar Schedule (Sun Times)"), value: "solar" }
+             ]
+         }
+ 
+@@ -81,8 +81,8 @@
+         ToggleSettingPlus {
+             id: showWeather
+             settingKey: "showWeather"
+-            label: I18n.trFor("persona5Calendar", "Display Weather Icon")
+-            description: I18n.trFor("persona5Calendar", "Show current weather condition integrated with DMS WeatherService.")
++            label: I18n.tr("Display Weather Icon")
++            description: I18n.tr("Show current weather condition integrated with DMS WeatherService.")
+             defaultValue: true
+         }
+ 
+@@ -91,8 +91,8 @@
+         ToggleSettingPlus {
+             id: animateWeather
+             settingKey: "animateWeather"
+-            label: I18n.trFor("persona5Calendar", "Animate Weather")
+-            description: I18n.trFor("persona5Calendar", "Cycle weather icon frames for game-authentic animation.")
++            label: I18n.tr("Animate Weather")
++            description: I18n.tr("Cycle weather icon frames for game-authentic animation.")
+             defaultValue: true
+             enabled: showWeather.value
+         }
+@@ -102,8 +102,8 @@
+         SliderSettingPlus {
+             id: animInterval
+             settingKey: "animInterval"
+-            label: I18n.trFor("persona5Calendar", "Animation Speed")
+-            description: I18n.trFor("persona5Calendar", "Interval between weather animation frames (lower is faster).")
++            label: I18n.tr("Animation Speed")
++            description: I18n.tr("Interval between weather animation frames (lower is faster).")
+             defaultValue: 300
+             minimum: 150
+             maximum: 800
+@@ -118,7 +118,7 @@
+         id: interactionSection
+ 
+         SectionTitle {
+-            text: I18n.trFor("persona5Calendar", "Interactions")
++            text: I18n.tr("Interactions")
+             icon: "touch_app"
+             showReset: clickAction.isDirty
+             onResetClicked: {
+@@ -129,13 +129,13 @@
+         SelectionSettingPlus {
+             id: clickAction
+             settingKey: "clickAction"
+-            label: I18n.trFor("persona5Calendar", "Click Action")
+-            description: I18n.trFor("persona5Calendar", "Action triggered when clicking anywhere on the calendar.")
++            label: I18n.tr("Click Action")
++            description: I18n.tr("Action triggered when clicking anywhere on the calendar.")
+             defaultValue: "refresh"
+             options: [
+-                { label: I18n.trFor("persona5Calendar", "Force Refresh Weather"), value: "refresh" },
+-                { label: I18n.trFor("persona5Calendar", "Show Date & Weather Toast"), value: "dateInfo" },
+-                { label: I18n.trFor("persona5Calendar", "None"), value: "none" }
++                { label: I18n.tr("Force Refresh Weather"), value: "refresh" },
++                { label: I18n.tr("Show Date & Weather Toast"), value: "dateInfo" },
++                { label: I18n.tr("None"), value: "none" }
+             ]
+         }
+     }
+@@ -145,7 +145,7 @@
+ 
+         SectionTitle {
+             id: creditsTitle
+-            text: I18n.trFor("persona5Calendar", "Credits")
++            text: I18n.tr("Credits")
+             icon: "favorite"
+             collapsible: true
+             settingKey: "creditsExpanded"
+@@ -157,19 +157,19 @@
+                 {
+                     author: "Mive82",
+                     url: "https://github.com/Mive82/Persona-5-Calendar",
+-                    role: I18n.trFor("persona5Calendar", "Creator of the original Persona 5 Rainmeter skin"),
++                    role: I18n.tr("Creator of the original Persona 5 Rainmeter skin"),
+                     icon: "code"
+                 },
+                 {
+                     author: "BHDown",
+                     url: "https://www.reddit.com/r/Persona5/comments/bjldpg/high_resolution_calendar_assets_and_rainmeter/",
+-                    role: I18n.trFor("persona5Calendar", "High-resolution calendar vector graphics and assets"),
++                    role: I18n.tr("High-resolution calendar vector graphics and assets"),
+                     icon: "brush"
+                 },
+                 {
+                     author: "Dartemil",
+                     url: "https://www.deviantart.com/dartemil",
+-                    role: I18n.trFor("persona5Calendar", "Original Persona 5 Calendar skin concept"),
++                    role: I18n.tr("Original Persona 5 Calendar skin concept"),
+                     icon: "palette"
+                 }
+             ]
+diff -r a/Persona5CalendarWidget.qml b/Persona5CalendarWidget.qml
+--- a/Persona5CalendarWidget.qml	2026-10-15 01:41:02.861994027 -0300
++++ b/Persona5CalendarWidget.qml	2026-10-15 01:41:02.874838247 -0300
+@@ -224,11 +224,13 @@
+                 if (root.clickAction === "refresh") {
+                     if (WeatherService) WeatherService.forceRefresh();
+                     if (typeof ToastService !== "undefined" && ToastService) {
+-                        ToastService.showInfo(I18n.trFor("persona5Calendar", "Weather refreshed"));
++                        ToastService.showInfo(I18n.tr("Weather refreshed"));
+                     }
+                 } else if (root.clickAction === "dateInfo") {
+                     const dateStr = root.now ? root.now.toLocaleDateString(Qt.locale(), Locale.LongFormat) : "";
+-                    const tempStr = (WeatherService && WeatherService.currentTempText) ? WeatherService.currentTempText(false) : "";
++                    // DMS 1.4.6 WeatherService has no currentTempText(); inline of master's currentTempText(false).
++                    const tempUnit = SettingsData.useFahrenheit ? "°F" : "°C";
++                    const tempStr = WeatherService ? ((WeatherService.weather.available ? (SettingsData.useFahrenheit ? WeatherService.weather.tempF : WeatherService.weather.temp) : "--") + tempUnit) : "";
+                     if (typeof ToastService !== "undefined" && ToastService) {
+                         ToastService.showInfo(dateStr + (tempStr ? " • " + tempStr : ""));
+                     }
+diff -r a/shared/CreditsList.qml b/shared/CreditsList.qml
+--- a/shared/CreditsList.qml	2026-10-15 01:41:02.860020846 -0300
++++ b/shared/CreditsList.qml	2026-10-15 01:41:02.874716929 -0300
+@@ -88,7 +88,8 @@
+                             DankIcon {
+                                 name: creditRow.chipIcon
+                                 size: 13
+-                                color: chipBadge.isHovered ? Theme.primary : Theme.onPrimaryContainer
++                                // DMS 1.4.6: no Theme.onPrimaryContainer; use the theme's primaryContainerText like master.
++                                color: chipBadge.isHovered ? Theme.primary : (Theme.currentThemeData.primaryContainerText || Theme.surfaceText)
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 Behavior on color { ColorAnimation { duration: 150 } }
+                             }
+@@ -97,7 +98,7 @@
+                                 text: creditRow.authorText
+                                 font.pixelSize: Theme.fontSizeSmall - 1
+                                 font.weight: Font.DemiBold
+-                                color: chipBadge.isHovered ? Theme.primary : Theme.onPrimaryContainer
++                                color: chipBadge.isHovered ? Theme.primary : (Theme.currentThemeData.primaryContainerText || Theme.surfaceText)
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 Behavior on color { ColorAnimation { duration: 150 } }
+                             }
+@@ -106,7 +107,7 @@
+                                 visible: creditRow.authorUrl !== ""
+                                 name: "north_east"
+                                 size: 11
+-                                color: chipBadge.isHovered ? Theme.primary : Theme.onPrimaryContainer
++                                color: chipBadge.isHovered ? Theme.primary : (Theme.currentThemeData.primaryContainerText || Theme.surfaceText)
+                                 opacity: chipBadge.isHovered ? 1.0 : 0.65
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 Behavior on color { ColorAnimation { duration: 150 } }

@@ -5,9 +5,7 @@
     ./programs/kitty.nix
     ./programs/fish.nix
     ./programs/starship.nix
-    ./programs/obs.nix
     ./programs/fastfetch.nix
-    ./programs/vscode.nix
     ./programs/yazi.nix
     ./programs/dms-config.nix
     ./programs/niri-sync.nix
