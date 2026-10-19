@@ -1,0 +1,155 @@
+{
+  "lockfileVersion": 1,
+  "plugins": {
+    "aiOverviewControl": {
+      "repo": "https://github.com/bernardopg/AiOverviewControl",
+      "commit": "54421f00738f95529d5179cf768c2d4d482d5d3f"
+    },
+    "audioPortSwitcher": {
+      "repo": "https://github.com/osvaldx/Audio-Port-Switcher",
+      "commit": "c09de3433fce36f250625c3ac7ce7dcda8c17fee"
+    },
+    "bongoCat": {
+      "repo": "https://github.com/hthienloc/dms-plugins",
+      "path": "bongoCat",
+      "commit": "6783b9727535cefccae2a668e74e1d33cee7221d"
+    },
+    "calculator": {
+      "repo": "https://github.com/rochacbruno/DankCalculator",
+      "commit": "c9fbbe921e9afeb92f4e92390e9fc05f006f0373"
+    },
+    "catWidget": {
+      "repo": "https://github.com/xi-ve/cat-dms",
+      "commit": "eb7b5138b672be3c06445dd80de6bc30c3076030"
+    },
+    "claudeCodeUsage": {
+      "repo": "https://github.com/titeya/dms-claudecode",
+      "commit": "20a936f20c4785647a8317c9f60e7b168ca25b5b"
+    },
+    "clipboardPlus": {
+      "repo": "https://github.com/Dadangdut33/dms-plugins",
+      "path": "ClipboardPlus",
+      "commit": "63fe6b87c497f1f7c2ea61432716817db1c5c3a4"
+    },
+    "dankChat": {
+      "repo": "https://github.com/coldi1337/DankChat",
+      "commit": "f99b17ed4177566c1ac7bbd5344a87002d0ece86"
+    },
+    "dankCleaner": {
+      "repo": "https://github.com/NordicsSys/dankCleaner",
+      "commit": "9c4fc0352b3dd8d7dec1866fd10348b9bc256233"
+    },
+    "dankSoftwareDepot": {
+      "repo": "https://github.com/vinceecniv/DankSoftwareDepot",
+      "commit": "ff49275d5b1f47f363f807d248d26d7421f60065"
+    },
+    "dankTranslate": {
+      "repo": "https://github.com/alcxyz/DankTranslate",
+      "commit": "5f7d40b0902985c4990f3da24f373ba28a0e1895"
+    },
+    "dankscale": {
+      "repo": "https://github.com/dwright134/dms-dankscale",
+      "commit": "bddebf0e2935ba23b0614ff9af5bf8f4ed6d3d9f"
+    },
+    "dankterminaltheme": {
+      "repo": "https://github.com/eduardez/DankTerminalTheme",
+      "commit": "3b8bdec35fd0fe5a3e57056f22666938793833ee"
+    },
+    "desktopCommand": {
+      "repo": "https://github.com/yayuuu/desktopCommand",
+      "commit": "a2e663ee031918ea01e2e65cf88aa3ded85a53f8"
+    },
+    "developerUtilities": {
+      "repo": "https://github.com/xxyangyoulin/dms-plugin-developer-utilities",
+      "commit": "b115dcbbe0d82c80190f4fcc255a935e33889f4a"
+    },
+    "displayManager": {
+      "repo": "https://github.com/felri/display-manager-plugin-niri-dank-linux",
+      "commit": "64348e6ecf09737de75328c3f38f2d5c8c5fa313"
+    },
+    "displayMirror": {
+      "repo": "https://github.com/jfchenier/dms-display-mirror",
+      "commit": "92cd44c4fb67834bf71fdd78f83c29df5e0750b2"
+    },
+    "dmsNothingX": {
+      "repo": "https://github.com/Bestello/dms-nothingx",
+      "commit": "a9a32025efc1068875a9a62db04d18924364c8bf"
+    },
+    "dmsThemeSync": {
+      "repo": "https://github.com/arqueon/dms-theme-sync",
+      "commit": "edde68a6669f1b2373e6a1494d32cf0aff8a3ecc"
+    },
+    "dockerDashboard": {
+      "repo": "https://github.com/HotcocoaCanary/Canary-DMS-DockerDashboard",
+      "commit": "1dfeb29cf539cad5570933f9d224e4d4abccd8c1"
+    },
+    "dockerManager": {
+      "repo": "https://github.com/LuckShiba/DmsDockerManager",
+      "commit": "f6f7d94c84510da098980a2bb733137e90f98fd8"
+    },
+    "emojiLauncher": {
+      "repo": "https://github.com/devnullvoid/dms-emoji-launcher",
+      "commit": "8ff394e3ddfcb2fd755ed2e7b4c6f01f3e26e596"
+    },
+    "emojiPicker": {
+      "repo": "https://github.com/hthienloc/dms-plugins",
+      "path": "emojiPicker",
+      "commit": "6783b9727535cefccae2a668e74e1d33cee7221d"
+    },
+    "formatColorPicker": {
+      "repo": "https://github.com/Incognitux/dms-format-color-picker",
+      "commit": "7c6703ef021908c09c5c0f2752760852f2b00100"
+    },
+    "homeAssistantMonitor": {
+      "repo": "https://github.com/xxyangyoulin/dms-plugin-hass",
+      "commit": "a2370721cdcb96dc37aaae21e32e84cbb4c7c1fa"
+    },
+    "mangoWmLayoutManager": {
+      "repo": "https://github.com/omarluq/DMSMangoWCLayoutManager",
+      "commit": "f4824511dad314db9881a1974387a4546e5aae6d"
+    },
+    "mediaFrame": {
+      "repo": "https://codeberg.org/claymorwan/dms-plugins",
+      "path": "mediaFrame",
+      "commit": "c0de20519e991a0cbf826da5618bc59127a2d4da"
+    },
+    "mediaPlayer": {
+      "repo": "https://github.com/arrifat346afs/mediaPlayer",
+      "commit": "56ec160ed3fe32ad55b920ff462727d918b6eb51"
+    },
+    "modernClock": {
+      "repo": "https://github.com/beefsizzle/ModernClockDMS",
+      "commit": "0d11d9fb560547a2589d59e456598f7c94847bae"
+    },
+    "niriDS": {
+      "repo": "https://github.com/hthienloc/dms-plugins",
+      "path": "niriDS",
+      "commit": "6783b9727535cefccae2a668e74e1d33cee7221d"
+    },
+    "nixPackageRunner": {
+      "repo": "https://github.com/iahccc/NixPackageRunner",
+      "commit": "829ad93c15b7c0ec82a6d7483728029037442601"
+    },
+    "openTrackerBar": {
+      "repo": "https://github.com/wsmajt/OpenTrackerBar",
+      "commit": "6b74a4f0af6f22fb7fb407a7eae0dffa64bcf820"
+    },
+    "quickCapture": {
+      "repo": "https://github.com/hthienloc/dms-plugins",
+      "path": "quickCapture",
+      "commit": "6783b9727535cefccae2a668e74e1d33cee7221d"
+    },
+    "recentFiles": {
+      "repo": "https://github.com/gouwazi/dms-recent-files",
+      "commit": "15010449df58ffec4f85acd48f8ee1145de31a1a"
+    },
+    "smartTimer": {
+      "repo": "https://github.com/lung595/Sands",
+      "commit": "b3760d9d438e06d37b136a8c2f9c87fed73de279"
+    },
+    "wallpaperCarousel": {
+      "repo": "https://github.com/motor-dev/wallpaperCarousel",
+      "commit": "761ecd1b7f347beee9f17909f8334d987c935a1a"
+    }
+  }
+}

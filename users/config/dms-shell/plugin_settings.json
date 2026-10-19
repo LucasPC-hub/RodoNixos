@@ -1,0 +1,221 @@
+{
+  "catWidget": {
+    "enabled": true
+  },
+  "displayMirror": {
+    "enabled": true
+  },
+  "calculator": {
+    "enabled": true,
+    "trigger": "="
+  },
+  "formatColorPicker": {
+    "enabled": true
+  },
+  "dockerManager": {
+    "enabled": true,
+    "groupByCompose": false
+  },
+  "claudeCodeUsage": {
+    "enabled": true
+  },
+  "screenCaptureToolbar": {
+    "enabled": true
+  },
+  "quickCapture": {
+    "enabled": true,
+    "modalOpacity": 0,
+    "defaultTool": "highlighter",
+    "roundRect": true,
+    "roundHighlighter": true,
+    "usageGuideExpanded": true
+  },
+  "dockerDashboard": {
+    "enabled": true
+  },
+  "dmsNothingX": {
+    "enabled": true
+  },
+  "dmsfilemanager": {
+    "enabled": true
+  },
+  "developerUtilities": {
+    "enabled": true
+  },
+  "recentFiles": {
+    "enabled": true,
+    "trigger": "rf",
+    "noTrigger": false,
+    "settingsVersion": 1
+  },
+  "clipboardPlus": {
+    "enabled": true
+  },
+  "smartTimer": {
+    "enabled": true,
+    "noTrigger": true
+  },
+  "audioPortSwitcher": {
+    "enabled": true
+  },
+  "dankterminaltheme": {
+    "enabled": true
+  },
+  "wallpaperCarousel": {
+    "enabled": true
+  },
+  "emojiPicker": {
+    "enabled": true
+  },
+  "bongoCat": {
+    "enabled": true
+  },
+  "handMirror": {
+    "enabled": true
+  },
+  "niriDS": {
+    "enabled": true
+  },
+  "emojiLauncher": {
+    "enabled": true,
+    "recentEmojis": ""
+  },
+  "dmsThemeSync": {
+    "enabled": true,
+    "folderColorBaseThemeDark": "",
+    "folderColorBaseThemeLight": "",
+    "folderColorBaseTheme": ""
+  },
+  "homeAssistantMonitor": {
+    "enabled": true
+  },
+  "dankSoftwareDepot": {
+    "enabled": true
+  },
+  "aiOverviewControl": {
+    "enabled": false
+  },
+  "dankscale": {
+    "enabled": false,
+    "lastAccount": ""
+  },
+  "displayManager": {
+    "enabled": true
+  },
+  "modernClock": {
+    "enabled": true
+  },
+  "desktopCommand": {
+    "enabled": true
+  },
+  "mediaPlayer": {
+    "enabled": false
+  },
+  "bitwarden": {
+    "enabled": true
+  },
+  "dankTranslate": {
+    "enabled": true
+  },
+  "nixPackageRunner": {
+    "enabled": true
+  },
+  "dankCleaner": {
+    "enabled": true
+  },
+  "commandShelf": {
+    "enabled": true
+  },
+  "enderPulse": {
+    "enabled": true
+  },
+  "nordHub": {
+    "enabled": true
+  },
+  "nordMediaCard": {
+    "enabled": true
+  },
+  "lyrics": {
+    "enabled": true
+  },
+  "tailscale": {
+    "enabled": false
+  },
+  "mediaControlPlus": {
+    "enabled": true
+  },
+  "simpleAudioControl": {
+    "enabled": true
+  },
+  "ambientSound": {
+    "enabled": true,
+    "soundVolumes": {
+      "brown-noise": 100
+    }
+  },
+  "breathing": {
+    "enabled": true
+  },
+  "takeABreak": {
+    "enabled": true
+  },
+  "timer": {
+    "enabled": true
+  },
+  "ipIndicator": {
+    "enabled": true
+  },
+  "mediaDownloader": {
+    "enabled": true
+  },
+  "ocrScanner": {
+    "enabled": true
+  },
+  "desktopWidgetToggle": {
+    "enabled": true,
+    "activeGroupIds": [],
+    "activeGroupId": "",
+    "groups": [
+      {
+        "id": "pc",
+        "name": "Análise do PC",
+        "icon": "monitoring",
+        "widgets": [
+          "dw_glass_sistema",
+          "dw_glass_docker",
+          "dw_glass_servicos"
+        ],
+        "autoDismissDuration": 0
+      },
+      {
+        "id": "musica",
+        "name": "Música",
+        "icon": "music_note",
+        "widgets": [
+          "m_midia",
+          "m_pulse"
+        ],
+        "autoDismissDuration": 0
+      }
+    ]
+  },
+  "dankPomodoroTimer": {
+    "enabled": true
+  },
+  "githubHeatmapPlus": {
+    "enabled": true,
+    "username": ""
+  },
+  "persona5Calendar": {
+    "enabled": true
+  },
+  "relogioWindows": {
+    "enabled": true
+  },
+  "bandejaOculta": {
+    "enabled": true
+  },
+  "kaomojiPicker": {
+    "enabled": true
+  }
+}

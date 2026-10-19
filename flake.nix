@@ -121,20 +121,11 @@
                   hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
                 };
               });
-              # openldap test017-syncreplication-refresh é flaky (timing-dependent)
-              openldap = prev.openldap.overrideAttrs (_old: {
-                doCheck = false;
-              });
               quickshell = inputs.quickshell.packages.${system}.default;
             })
             inputs.claude-desktop.overlays.default
           ];
         }
-
-        # Editor de vídeo open source
-        ({ pkgs, ... }: {
-          environment.systemPackages = [ pkgs.kdePackages.kdenlive ];
-        })
 
         inputs.dms.nixosModules.default
         inputs.dank-greeter.nixosModules.default
@@ -145,6 +136,10 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
+            # Se um arquivo do home já existir fora do controle do HM, renomeia
+            # em vez de abortar a ativação. Sem isso o home-manager-<user>.service
+            # falha no meio do rebuild e nenhuma config de usuário é aplicada.
+            backupFileExtension = "hm-bak";
             extraSpecialArgs = { inherit inputs; };
             users = builtins.mapAttrs (_name: path: import path) users;
           };
@@ -182,6 +177,12 @@
       laal = mkHost {
         hostPath = ./hosts/laal;
         users = { laal = ./users/laal.nix; };
+      };
+
+      # Aspire 5 do lucasbit, com o ambiente da laal (hosts/laal/comum.nix).
+      rodolucasbit = mkHost {
+        hostPath = ./hosts/rodolucasbit;
+        users = { lucasbit = ./users/lucasbit.nix; };
       };
 
       rodojaisla = mkHost {

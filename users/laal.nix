@@ -1,34 +1,26 @@
-{ pkgs, ... }:
+{ config, ... }:
 
 let
-  jetbrains = import ./programs/jetbrains.nix { inherit pkgs; };
+  # Contexto global das IAs. Link "fora do store" para o arquivo do repo: dá
+  # pra editar direto (inclusive pelas próprias IAs) sem rodar fkr.
+  aiContexto = "${config.home.homeDirectory}/RodoNixos/users/config/ai/CONTEXTO.md";
 in
 {
+  # Apps, Dolphin e ajustes do desktop vêm do perfil (compartilhado com o lucasbit).
   imports = [
-    ./shared.nix
+    ./perfil-laal.nix
   ];
 
   home.username = "laal";
   home.homeDirectory = "/home/laal";
   home.stateVersion = "25.05";
 
-  # Pacotes só da laal
-  home.packages = with pkgs; [
-    obsidian
-    pavucontrol
-    vlc
-    remmina
-    meld
-    zapzap
-    dbeaver-bin
-    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.webstorm)
-    (jetbrains.withJetbrainsWrapper pkgs.jetbrains.datagrip)
-    zed-editor
-    libreoffice-qt6-fresh
-    collabora-online
-    wl-mirror
-    insomnia
-  ];
+  home.file.".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink aiContexto;
+  home.file.".codex/AGENTS.md".source = config.lib.file.mkOutOfStoreSymlink aiContexto;
+
+  # Variáveis de todo o PC: valem no terminal e nos apps gráficos (depois de
+  # sair e entrar na sessão). Qualquer ferramenta lê com $AI_CONTEXTO.
+  home.sessionVariables.AI_CONTEXTO = aiContexto;
 
   # Identidade git — aqui e não em users/shared.nix, senão todo mundo
   # commitaria com a conta da laal.
@@ -37,21 +29,8 @@ in
     email = "llmotadev@gmail.com";
   };
 
-  home.pointerCursor = {
-    enable = true;
-    gtk.enable = true;
-    x11.enable = true;
-    package = pkgs.adwaita-icon-theme;
-    name = "Adwaita";
-    size = 24;
-  };
-
-  home.sessionVariables = {
-    EDITOR = "vim";
-    QT_QPA_PLATFORMTHEME = "gtk3";
-    TERMINAL = "kitty";
-    BROWSER = "zen-beta";
-    FILES = "thunar";
-    NIXOS_OZONE_WL = "1";
+  # Aliases só da laal (somam com os compartilhados em users/programs/fish.nix)
+  programs.fish.shellAliases = {
+    sotao = "cd ${config.home.homeDirectory}/develop/laal/sotao-cerebral";
   };
 }
