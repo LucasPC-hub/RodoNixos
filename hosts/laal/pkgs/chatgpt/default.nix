@@ -9,7 +9,7 @@
 let
   # A OpenAI só publica a URL "latest": quando sair versão nova o hash quebra
   # o build ("hash mismatch"). Aí é atualizar version e hash aqui.
-  version = "26.1007.71326";
+  version = "26.1013.40934";
 
   chatgpt-unwrapped = stdenvNoCC.mkDerivation {
     pname = "chatgpt-unwrapped";
@@ -17,7 +17,7 @@ let
 
     src = fetchurl {
       url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_amd64.deb";
-      hash = "sha256-DgBrSTFxL1qQ1M0ElyxuC1M87c39srUZRtW5NnRx9VY=";
+      hash = "sha256-PKWef5pmQbni+5rWgGg3hLWrgCb/dBj7ISoOvl3zodc=";
     };
 
     nativeBuildInputs = [ dpkg ];
