@@ -29,6 +29,16 @@
     "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
   ];
 
+  # Teto de paralelismo de build (mesmo motivo do host da laal). Com o padrão
+  # (max-jobs=auto, cores=0) são até 12 builds x 12 compiladores nos 12
+  # threads; o primeiro rebuild compila coisas fora do cache (qs-bitwarden em
+  # Rust, quickshell/cpptrace em C++, dms em Go) e o kernel matou o rustc por
+  # falta de memória. 2 jobs x 6 cores ocupa os 12 threads sem estourar os 24 GB.
+  nix.settings = {
+    max-jobs = 2;
+    cores = 6;
+  };
+
   # Intel UHD (Alder Lake): decodificação de vídeo por hardware (VA-API/QSV).
   hardware.graphics.extraPackages = with pkgs; [ intel-media-driver vpl-gpu-rt ];
   environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
